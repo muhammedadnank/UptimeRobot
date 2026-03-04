@@ -20,7 +20,6 @@ def get_db():
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 async def get_user(telegram_id: int) -> dict | None:
-    """Fetch user by telegram_id. Returns None if not found."""
     try:
         return await get_db().users.find_one({"telegram_id": telegram_id}, {"_id": 0})
     except Exception as e:
@@ -29,7 +28,6 @@ async def get_user(telegram_id: int) -> dict | None:
 
 
 async def upsert_user(telegram_id: int, api_key: str) -> bool:
-    """Insert or update user with their UptimeRobot API key."""
     try:
         await get_db().users.update_one(
             {"telegram_id": telegram_id},
@@ -41,6 +39,8 @@ async def upsert_user(telegram_id: int, api_key: str) -> bool:
                 },
                 "$setOnInsert": {
                     "created_at": datetime.now(timezone.utc),
+                    "banned": False,
+                    "ban_reason": "",
                 },
             },
             upsert=True,
@@ -52,7 +52,6 @@ async def upsert_user(telegram_id: int, api_key: str) -> bool:
 
 
 async def update_last_active(telegram_id: int) -> None:
-    """Update last_active timestamp for a user."""
     try:
         await get_db().users.update_one(
             {"telegram_id": telegram_id},
@@ -63,12 +62,121 @@ async def update_last_active(telegram_id: int) -> None:
 
 
 async def delete_user(telegram_id: int) -> bool:
-    """Delete a user and their stored API key."""
     try:
         result = await get_db().users.delete_one({"telegram_id": telegram_id})
         return result.deleted_count == 1
     except Exception as e:
         logger.error("delete_user error: %s", e)
+        return False
+
+
+async def get_all_users():
+    """Async generator yielding all user documents."""
+    try:
+        async for user in get_db().users.find({}, {"_id": 0}):
+            yield user
+    except Exception as e:
+        logger.error("get_all_users error: %s", e)
+
+
+async def total_users_count() -> int:
+    try:
+        return await get_db().users.count_documents({})
+    except Exception as e:
+        logger.error("total_users_count error: %s", e)
+        return 0
+
+
+# ── Ban / Unban ───────────────────────────────────────────────────────────────
+
+async def ban_user(telegram_id: int, reason: str = "No reason provided") -> bool:
+    """Ban a user. Creates a minimal record if they don't exist yet."""
+    try:
+        await get_db().users.update_one(
+            {"telegram_id": telegram_id},
+            {
+                "$set": {
+                    "telegram_id": telegram_id,
+                    "banned": True,
+                    "ban_reason": reason,
+                    "banned_at": datetime.now(timezone.utc),
+                }
+            },
+            upsert=True,
+        )
+        return True
+    except Exception as e:
+        logger.error("ban_user error: %s", e)
+        return False
+
+
+async def unban_user(telegram_id: int) -> bool:
+    try:
+        result = await get_db().users.update_one(
+            {"telegram_id": telegram_id},
+            {"$set": {"banned": False, "ban_reason": ""}},
+        )
+        return result.modified_count == 1
+    except Exception as e:
+        logger.error("unban_user error: %s", e)
+        return False
+
+
+async def is_banned(telegram_id: int) -> tuple[bool, str]:
+    """Returns (is_banned, reason)."""
+    try:
+        user = await get_db().users.find_one({"telegram_id": telegram_id}, {"_id": 0})
+        if user and user.get("banned"):
+            return True, user.get("ban_reason", "No reason provided")
+        return False, ""
+    except Exception as e:
+        logger.error("is_banned error: %s", e)
+        return False, ""
+
+
+async def get_banned_users():
+    """Async generator yielding all banned user documents."""
+    try:
+        async for user in get_db().users.find({"banned": True}, {"_id": 0}):
+            yield user
+    except Exception as e:
+        logger.error("get_banned_users error: %s", e)
+
+
+async def total_banned_count() -> int:
+    try:
+        return await get_db().users.count_documents({"banned": True})
+    except Exception as e:
+        logger.error("total_banned_count error: %s", e)
+        return 0
+
+
+# ── Force Subscribe ───────────────────────────────────────────────────────────
+
+async def get_force_sub() -> str | None:
+    """Get the current force-sub channel username/id from DB config."""
+    try:
+        doc = await get_db().config.find_one({"key": "force_sub"})
+        return doc.get("value") if doc else None
+    except Exception as e:
+        logger.error("get_force_sub error: %s", e)
+        return None
+
+
+async def set_force_sub(channel: str | None) -> bool:
+    """Set or clear the force-sub channel. Pass None to disable."""
+    try:
+        if channel is None:
+            await get_db().config.delete_one({"key": "force_sub"})
+        else:
+            await get_db().config.update_one(
+                {"key": "force_sub"},
+                {"$set": {"key": "force_sub", "value": channel}},
+                upsert=True,
+            )
+        return True
+    except Exception as e:
+        logger.error("set_force_sub error: %s", e)
         return False
 
 
@@ -79,6 +187,7 @@ async def init_db() -> None:
     try:
         db = get_db()
         await db.users.create_index("telegram_id", unique=True)
+        await db.config.create_index("key", unique=True)
         logger.info("✅ MongoDB connected and indexes ready.")
     except Exception as e:
         logger.error("init_db error: %s", e)
