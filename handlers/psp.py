@@ -2,7 +2,6 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import is_authorized, get_api
 
-PSP_SORT  = {1:"Friendly Name A-Z", 2:"Friendly Name Z-A", 3:"Status Up first", 4:"Status Down first"}
 PSP_STATUS= {0:"Paused", 1:"Active"}
 
 
@@ -39,9 +38,9 @@ def register(app: Client):
     @app.on_message(filters.command("addpsp") & filters.private)
     async def cmd_addpsp(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        from handlers.monitors import user_state
+        from handlers.monitors import _set_state
         uid = message.from_user.id
-        user_state[uid] = {"step": "psp_name", "data": {}}
+        _set_state(uid, "psp_name")
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
         await message.reply(
             "📄 **New Public Status Page**\n\nEnter a **name** for the status page:",
