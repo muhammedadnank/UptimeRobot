@@ -10,12 +10,12 @@ class UptimeRobotAPI:
         self.api_key = api_key
 
     async def _post(self, endpoint: str, payload: dict) -> dict | None:
-        data = {**payload, "api_key": self.api_key, "format": "json"}
+        form_data = {**payload, "api_key": self.api_key, "format": "json"}
         try:
             async with aiohttp.ClientSession() as s:
                 async with s.post(
                     f"{BASE}/{endpoint}",
-                    data=data,
+                    data=form_data,
                     timeout=aiohttp.ClientTimeout(total=15),
                 ) as r:
                     r.raise_for_status()
