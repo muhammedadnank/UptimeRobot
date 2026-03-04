@@ -1,5 +1,5 @@
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import is_authorized, get_api
 
 CONTACT_TYPE = {1:"SMS", 2:"Email", 3:"Webhook", 4:"Boxcar", 5:"Push Bullet",
@@ -13,7 +13,7 @@ def register(app: Client):
     @app.on_message(filters.command("contacts") & filters.private)
     async def cmd_contacts(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent     = await message.reply("⏳ Fetching alert contacts…", quote=True)
+        sent     = await message.reply("⏳ Fetching alert contacts…")
         contacts = await get_api().get_alert_contacts()
         if not contacts:
             await sent.edit_text("📭 No alert contacts found.\n\nUse /addcontact to add one.")
@@ -40,13 +40,13 @@ def register(app: Client):
     @app.on_message(filters.command("addcontact") & filters.private)
     async def cmd_addcontact(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        from handlers.monitors import user_state
+        from handlers.monitors import _set_state
         uid = message.from_user.id
-        user_state[uid] = {"step": "contact_name", "data": {}}
+        _set_state(uid, "contact_name")
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
         await message.reply(
             "➕ **Add Alert Contact**\n\nStep 1 — Enter a **friendly name**:",
-            reply_markup=markup, quote=True
+            reply_markup=markup
         )
 
     @app.on_message(filters.command("delcontact") & filters.private)
@@ -54,7 +54,7 @@ def register(app: Client):
         if not is_authorized(message.from_user.id): return
         args = message.command[1:]
         if not args:
-            await message.reply("Usage: `/delcontact <contact_id>`\nGet IDs from /contacts", quote=True)
+            await message.reply("Usage: `/delcontact <contact_id>`\nGet IDs from /contacts")
             return
         cid = args[0]
         markup = InlineKeyboardMarkup([[
@@ -63,5 +63,5 @@ def register(app: Client):
         ]])
         await message.reply(
             f"⚠️ Delete alert contact `{cid}`?",
-            reply_markup=markup, quote=True
+            reply_markup=markup
         )
