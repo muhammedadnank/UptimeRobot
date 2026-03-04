@@ -43,6 +43,7 @@ async def cmd_start(client: Client, message: Message):
         "• /psp — Public status pages\n"
         "• /addpsp — Add status page\n"
         "• /delpsp `<id>` — Delete status page\n"
+        "• /cancel — Cancel current operation\n"
         "• /menu — Interactive panel",
         reply_markup=main_keyboard(),
         quote=True,
