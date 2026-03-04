@@ -10,7 +10,7 @@ def register(app: Client):
     @app.on_message(filters.command("psp") & filters.private)
     async def cmd_psp(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent = await message.reply("⏳ Fetching status pages…", quote=True)
+        sent = await message.reply("⏳ Fetching status pages…")
         psps = await get_api().get_psps()
         if not psps:
             await sent.edit_text("📄 No public status pages found.\n\nUse /addpsp to create one.")
@@ -44,7 +44,7 @@ def register(app: Client):
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
         await message.reply(
             "📄 **New Public Status Page**\n\nEnter a **name** for the status page:",
-            reply_markup=markup, quote=True
+            reply_markup=markup
         )
 
     @app.on_message(filters.command("delpsp") & filters.private)
@@ -52,11 +52,11 @@ def register(app: Client):
         if not is_authorized(message.from_user.id): return
         args = message.command[1:]
         if not args:
-            await message.reply("Usage: `/delpsp <psp_id>`\nGet IDs from /psp", quote=True)
+            await message.reply("Usage: `/delpsp <psp_id>`\nGet IDs from /psp")
             return
         pid = args[0]
         markup = InlineKeyboardMarkup([[
             InlineKeyboardButton("✅ Yes, delete", callback_data=f"confirm_delpsp_{pid}"),
             InlineKeyboardButton("❌ Cancel",       callback_data="cancel"),
         ]])
-        await message.reply(f"⚠️ Delete status page `{pid}`?", reply_markup=markup, quote=True)
+        await message.reply(f"⚠️ Delete status page `{pid}`?", reply_markup=markup)
