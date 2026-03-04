@@ -1,27 +1,11 @@
-import os
 from uptime_robot import UptimeRobotAPI
-
-ALLOWED_USERS_RAW = os.environ.get("ALLOWED_USERS", "")
-_api_instance: UptimeRobotAPI | None = None
+from db import get_user, update_last_active
 
 
-def init_api(key: str):
-    global _api_instance
-    _api_instance = UptimeRobotAPI(key)
-
-
-def get_api() -> UptimeRobotAPI:
-    if _api_instance is None:
-        raise RuntimeError("API not initialized. Call init_api() first.")
-    return _api_instance
-
-
-def get_allowed_users() -> list[int]:
-    if not ALLOWED_USERS_RAW:
-        return []
-    return [int(x.strip()) for x in ALLOWED_USERS_RAW.split(",") if x.strip()]
-
-
-def is_authorized(user_id: int) -> bool:
-    allowed = get_allowed_users()
-    return (not allowed) or (user_id in allowed)
+async def get_api_for(user_id: int) -> UptimeRobotAPI | None:
+    """Get a per-user UptimeRobotAPI instance from MongoDB."""
+    user = await get_user(user_id)
+    if not user or not user.get("api_key"):
+        return None
+    await update_last_active(user_id)
+    return UptimeRobotAPI(user["api_key"])
