@@ -1,55 +1,62 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from utils import is_authorized, get_api
+from utils import get_api_for
+from handlers.monitors import _set_state
 
-PSP_STATUS= {0:"Paused", 1:"Active"}
+PSP_STATUS = {0: "Paused", 1: "Active"}
+NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
 
 
 def register(app: Client):
 
     @app.on_message(filters.command("psp") & filters.private)
     async def cmd_psp(client: Client, message: Message):
-        if not is_authorized(message.from_user.id): return
+        api = await get_api_for(message.from_user.id)
+        if not api:
+            await message.reply(NO_KEY_MSG)
+            return
         sent = await message.reply("⏳ Fetching status pages…")
-        psps = await get_api().get_psps()
+        psps = await api.get_psps()
         if not psps:
             await sent.edit_text("📄 No public status pages found.\n\nUse /addpsp to create one.")
             return
         lines = ["📄 **Public Status Pages**\n"]
         for p in psps:
             status    = PSP_STATUS.get(p.get("status", 0), "Unknown")
-            name      = p.get("friendly_name", "No name")
-            subdomain = p.get("custom_domain") or f"{p.get('subdomain','?')}.uptimerobot.com"
-            pid       = p.get("id", "")
+            subdomain = p.get("custom_domain") or f"{p.get('subdomain', '?')}.uptimerobot.com"
             monitors  = p.get("monitors", [])
             mon_count = len(monitors) if isinstance(monitors, list) else ("All" if monitors == 0 else monitors)
             lines.append(
-                f"🌐 **{name}**\n"
+                f"🌐 **{p.get('friendly_name', 'No name')}**\n"
                 f"   🔗 `{subdomain}`\n"
                 f"   📊 Monitors: `{mon_count}`  •  {status}\n"
-                f"   🆔 `{pid}`\n"
+                f"   🆔 `{p.get('id', '')}`\n"
             )
         markup = InlineKeyboardMarkup([[
-            InlineKeyboardButton("➕ Add Page",  callback_data="add_psp"),
-            InlineKeyboardButton("🔄 Refresh",   callback_data="psp"),
+            InlineKeyboardButton("➕ Add Page", callback_data="add_psp"),
+            InlineKeyboardButton("🔄 Refresh",  callback_data="psp"),
         ]])
         await sent.edit_text("\n".join(lines), reply_markup=markup)
 
     @app.on_message(filters.command("addpsp") & filters.private)
     async def cmd_addpsp(client: Client, message: Message):
-        if not is_authorized(message.from_user.id): return
-        from handlers.monitors import _set_state
-        uid = message.from_user.id
-        _set_state(uid, "psp_name")
+        api = await get_api_for(message.from_user.id)
+        if not api:
+            await message.reply(NO_KEY_MSG)
+            return
+        _set_state(message.from_user.id, "psp_name")
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
         await message.reply(
-            "📄 **New Public Status Page**\n\nEnter a **name** for the status page:",
-            reply_markup=markup
+            "📄 **New Public Status Page**\n\nEnter a **name**:",
+            reply_markup=markup,
         )
 
     @app.on_message(filters.command("delpsp") & filters.private)
     async def cmd_delpsp(client: Client, message: Message):
-        if not is_authorized(message.from_user.id): return
+        api = await get_api_for(message.from_user.id)
+        if not api:
+            await message.reply(NO_KEY_MSG)
+            return
         args = message.command[1:]
         if not args:
             await message.reply("Usage: `/delpsp <psp_id>`\nGet IDs from /psp")
