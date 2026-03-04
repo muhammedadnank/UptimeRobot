@@ -1,9 +1,11 @@
 import os
+import sys
 import logging
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from db import init_db, get_user, upsert_user, delete_user
+from handlers.middleware import check_banned, check_force_sub
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -15,29 +17,29 @@ API_ID    = int(os.environ.get("API_ID", "0"))
 API_HASH  = os.environ.get("API_HASH", "")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
-# FIX: Do NOT create Client at module level.
-# The original code did `app = Client(...)` here, which caused a
+# FIX: Client created inside _run() — not at module level — to avoid the
 # "Future attached to a different loop" RuntimeError on Python 3.14.
-# asyncio.run() always creates a fresh event loop, but Pyrogram's Client
-# binds its internal executor futures to whatever loop exists at creation time.
-# Solution: create the Client inside _run(), after asyncio.run() has started
-# the event loop, so everything is bound to the same loop.
 app: Client = None  # type: ignore[assignment]
 
 NO_KEY_MSG = (
     "🔑 **API Key not set!**\n\n"
     "Please set your UptimeRobot API key first:\n"
-    "/setkey ur_xxxxx` or `/setkey u1234567-xxxx\n\n"
+    "`/setkey ur_your_api_key_here`\n\n"
     "Get your key from:\n"
-    "dashboard.uptimerobot.com → Integrations → API → Main API Key"
+    "dashboard.uptimerobot.com → Integrations & API → API"
 )
 
+
 # ── Core handlers ─────────────────────────────────────────────────────────────
-# Registered in _run() after the Client is created inside the event loop.
+
 def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("start") & filters.private)
     async def cmd_start(c: Client, message: Message):
+        if await check_banned(c, message):
+            return
+        if await check_force_sub(c, message):
+            return
         from handlers.callbacks import main_keyboard
         user = await get_user(message.from_user.id)
         has_key = bool(user and user.get("api_key"))
@@ -73,6 +75,10 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("menu") & filters.private)
     async def cmd_menu(c: Client, message: Message):
+        if await check_banned(c, message):
+            return
+        if await check_force_sub(c, message):
+            return
         from handlers.callbacks import main_keyboard
         user = await get_user(message.from_user.id)
         if not user or not user.get("api_key"):
@@ -85,6 +91,10 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("setkey") & filters.private)
     async def cmd_setkey(c: Client, message: Message):
+        if await check_banned(c, message):
+            return
+        if await check_force_sub(c, message):
+            return
         args = message.command[1:]
         if not args:
             await message.reply(
@@ -120,6 +130,8 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("mykey") & filters.private)
     async def cmd_mykey(c: Client, message: Message):
+        if await check_banned(c, message):
+            return
         user = await get_user(message.from_user.id)
         if not user or not user.get("api_key"):
             await message.reply("❌ No API key set.\n\nUse `/setkey ur_your_key` to set one.")
@@ -134,6 +146,8 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("deletekey") & filters.private)
     async def cmd_deletekey(c: Client, message: Message):
+        if await check_banned(c, message):
+            return
         from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         markup = InlineKeyboardMarkup([[
             InlineKeyboardButton("✅ Yes, delete", callback_data="confirm_deletekey"),
@@ -144,6 +158,21 @@ def _register_core_handlers(client: Client):
             "You will need to set it again to use the bot.",
             reply_markup=markup,
         )
+
+    # ── check_fsub callback (force-sub retry button) ──────────────────────────
+    @client.on_callback_query(filters.regex("^check_fsub$"))
+    async def cb_check_fsub(c: Client, query):
+        from handlers.middleware import check_force_sub as _cfs
+        from pyrogram.errors import MessageNotModified
+        still_blocked = await _cfs(c, query.message)
+        if not still_blocked:
+            await query.answer("✅ Verified! You can now use the bot.", show_alert=True)
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+        else:
+            await query.answer("❌ You haven't joined yet!", show_alert=True)
 
 
 def main():
@@ -160,9 +189,8 @@ def main():
     async def _run():
         global app
 
-        # FIX: Create the Client here, inside the running event loop, so that
-        # all of Pyrogram's internal asyncio primitives (futures, tasks,
-        # executor calls) are bound to this same loop.
+        # FIX: Create Client inside the running event loop so all internal
+        # asyncio primitives are bound to the same loop asyncio.run() created.
         app = Client(
             "uptime_bot",
             api_id=API_ID,
@@ -172,13 +200,14 @@ def main():
 
         # Register handlers
         _register_core_handlers(app)
-        from handlers import monitors, account, contacts, mwindow, psp, callbacks
+        from handlers import monitors, account, contacts, mwindow, psp, callbacks, admin
         monitors.register(app)
         account.register(app)
         contacts.register(app)
         mwindow.register(app)
         psp.register(app)
         callbacks.register(app)
+        admin.register(app)         # ← new
 
         await init_db()
         await app.start()
