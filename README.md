@@ -1,70 +1,198 @@
 # 🤖 UptimeRobot Telegram Bot
 
-Full control of your UptimeRobot account directly from Telegram. Built with **Pyrogram** (MTProto) and **aiohttp**.
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Framework](https://img.shields.io/badge/Framework-Kurigram-blue?logo=telegram&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Deploy](https://img.shields.io/badge/Deploy-Railway%20%7C%20Render-blueviolet)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+
+Full control of your **UptimeRobot** account directly from Telegram.  
+Built with **Kurigram** (active Pyrogram fork) and **aiohttp** — fully async, private-chat only.
 
 ---
 
 ## ✨ Features
 
-### 🖥️ Monitors
-- View all monitor statuses (Up / Down / Paused)
-- Response time & uptime % stats (7d / 30d / 90d)
-- Add new monitors (HTTP, Keyword, Ping, Port)
-- Pause / Resume / Delete monitors
+| Category | What you can do |
+|----------|----------------|
+| 🖥️ **Monitors** | View status (Up/Down/Paused), uptime % (7d/30d/90d), response times, add/pause/resume/delete |
+| 👤 **Account** | View email, monitor limit, check interval, Up/Down/Paused counts |
+| 🔔 **Alert Contacts** | List, add (Email/Telegram/Webhook/SMS/Slack), delete |
+| 🪟 **Maintenance Windows** | List, create (Once/Daily/Weekly/Monthly), delete |
+| 📄 **Public Status Pages** | List, create, delete |
+| 🔒 **Security** | Restrict access via `ALLOWED_USERS`, confirmation prompt on all deletes |
 
-### 👤 Account
-- View account email, monitor limit, and check interval
-- Up / Down / Paused monitor counts
+---
 
-### 🔔 Alert Contacts
-- List all alert contacts
-- Add new contacts (Email, Telegram, Webhook, SMS, Slack)
-- Delete contacts
+## 🖼️ Usage Examples
 
-### 🪟 Maintenance Windows
-- List maintenance windows
-- Create new windows (Once / Daily / Weekly / Monthly)
-- Delete windows
+### `/menu` — Interactive Control Panel
+```
+🖥️ UptimeRobot Control Panel
+Choose an action:
 
-### 📄 Public Status Pages
-- List status pages
-- Create new status pages
-- Delete status pages
+[ 📊 Status  ] [ 📈 Stats   ] [ 🔔 Alerts  ]
+[ 👤 Account ] [ 📬 Contacts] [ 🪟 MWindows]
+[ 📄 PSP     ] [ ➕ Add Monitor             ]
+```
 
-### 🔒 Security
-- Restrict bot access via `ALLOWED_USERS`
-- Confirmation prompt before all delete operations
+---
+
+### `/status` — Monitor Overview
+```
+📊 Monitor Status
+
+✅ My Website [Up]
+   🆔 123456789  •  🔧 HTTP(s)
+
+✅ API Server [Up]
+   🆔 123456790  •  🔧 HTTP(s)
+
+🔴 Staging DB [Down]
+   🆔 123456791  •  🔧 Ping
+
+⏸️ Dev Server [Paused]
+   🆔 123456792  •  🔧 HTTP(s)
+
+✅ Up: 2  🔴 Down: 1  ⏸️ Paused: 1
+
+[ 🔄 Refresh ] [ 📈 Stats ] [ 🔔 Alerts ]
+[ 🔙 Menu ]
+```
+
+---
+
+### `/stats` — Uptime & Response Times
+```
+📈 Monitor Stats
+
+🖥️ My Website
+   ⏱ Avg: 142 ms | 7d: 99.98% | 30d: 99.95% | 90d: 99.91%
+
+🖥️ API Server
+   ⏱ Avg: 87 ms  | 7d: 100%   | 30d: 99.99% | 90d: 99.97%
+
+🖥️ Staging DB
+   ⏱ Avg: N/A    | 7d: 94.20% | 30d: 97.10% | 90d: 98.50%
+
+[ 📊 Status ] [ 🔔 Alerts ]
+[ 🔙 Menu ]
+```
+
+---
+
+### `/add` — Add New Monitor (guided flow)
+```
+You:  /add
+
+Bot:  ➕ Add New Monitor
+      Step 1/3 — Enter a friendly name for the monitor:
+      [ ❌ Cancel ]
+
+You:  My New API
+
+Bot:  Step 2/3 — Enter the URL to monitor:
+      (e.g. https://example.com)
+      [ ❌ Cancel ]
+
+You:  https://api.mysite.com/health
+
+Bot:  Step 3/3 — Choose monitor type:
+      [ 🌐 HTTP(s) ] [ 🔑 Keyword ]
+      [ 📡 Ping    ] [ 🔌 Port    ]
+      [ ❌ Cancel ]
+
+You:  [ 🌐 HTTP(s) ]
+
+Bot:  ✅ Monitor created!
+      📛 Name: My New API
+      🔗 URL:  https://api.mysite.com/health
+      🔧 Type: HTTP(s)
+      🆔 ID:   987654321
+```
+
+---
+
+### `/alerts` — Recent Alert Logs
+```
+🔔 Recent Alerts
+
+🖥️ Staging DB
+   🔴 2025-01-15 03:42 — Went DOWN: Connection refused
+   ✅ 2025-01-15 03:50 — Came UP
+   🔴 2025-01-14 21:17 — Went DOWN: Timeout
+
+🖥️ My Website
+   ✅ 2025-01-13 08:00 — Came UP
+
+[ 📊 Status ] [ 📈 Stats ]
+[ 🔙 Menu ]
+```
+
+---
+
+### `/account` — Account Details
+```
+👤 Account Details
+
+📧 Email:    user@example.com
+📊 Monitors: 8 / 50
+⏱ Check interval: every 5 min
+
+✅ Up: 6  🔴 Down: 1  ⏸️ Paused: 1
+
+[ 🔙 Menu ]
+```
 
 ---
 
 ## 📋 Commands
 
+### General
 | Command | Description |
 |---------|-------------|
-| `/start` | Help message & command list |
-| `/menu` | Interactive button panel |
-| **Monitors** | |
+| `/start` | Help message & full command list |
+| `/menu` | Interactive inline button panel |
+| `/cancel` | Cancel any in-progress operation |
+
+### 🖥️ Monitors
+| Command | Description |
+|---------|-------------|
 | `/status` | Status of all monitors |
-| `/stats` | Uptime % & response times |
-| `/alerts` | Recent alert logs |
-| `/add` | Add a new monitor (guided) |
+| `/stats` | Uptime % & avg response times |
+| `/alerts` | Recent alert logs (last 3 per monitor) |
+| `/add` | Add a new monitor (guided, 3-step) |
 | `/pause <id>` | Pause a monitor |
 | `/resume <id>` | Resume a monitor |
-| `/delete <id>` | Delete a monitor |
-| **Account** | |
-| `/account` | Account details |
-| **Alert Contacts** | |
-| `/contacts` | List alert contacts |
+| `/delete <id>` | Delete a monitor (with confirmation) |
+
+### 👤 Account
+| Command | Description |
+|---------|-------------|
+| `/account` | View account details |
+
+### 🔔 Alert Contacts
+| Command | Description |
+|---------|-------------|
+| `/contacts` | List all alert contacts |
 | `/addcontact` | Add a new contact (guided) |
-| `/delcontact <id>` | Delete a contact |
-| **Maintenance Windows** | |
-| `/mwindow` | List maintenance windows |
-| `/addmwindow` | Add a new window (guided) |
-| `/delmwindow <id>` | Delete a window |
-| **Status Pages** | |
-| `/psp` | List public status pages |
-| `/addpsp` | Add a new status page (guided) |
-| `/delpsp <id>` | Delete a status page |
+| `/delcontact <id>` | Delete a contact (with confirmation) |
+
+### 🪟 Maintenance Windows
+| Command | Description |
+|---------|-------------|
+| `/mwindow` | List all maintenance windows |
+| `/addmwindow` | Create a new window (guided) |
+| `/delmwindow <id>` | Delete a window (with confirmation) |
+
+### 📄 Public Status Pages
+| Command | Description |
+|---------|-------------|
+| `/psp` | List all status pages |
+| `/addpsp` | Create a new status page (guided) |
+| `/delpsp <id>` | Delete a status page (with confirmation) |
+
+> 💡 Use `/status` to find monitor IDs for pause/resume/delete commands.
 
 ---
 
@@ -72,7 +200,7 @@ Full control of your UptimeRobot account directly from Telegram. Built with **Py
 
 ```
 uptimebot/
-├── bot.py                  # Main entry point, /start and /menu handlers
+├── bot.py                  # Entry point — /start, /menu, app init
 ├── uptime_robot.py         # Async UptimeRobot API wrapper (aiohttp)
 ├── utils.py                # Auth helpers & shared API instance
 ├── requirements.txt        # Python dependencies
@@ -81,7 +209,7 @@ uptimebot/
 ├── .env.example            # Environment variable template
 └── handlers/
     ├── __init__.py
-    ├── monitors.py         # Monitor commands + multi-step state machine
+    ├── monitors.py         # Monitor commands + multi-step state machine (with TTL)
     ├── account.py          # /account command
     ├── contacts.py         # Alert contact commands
     ├── mwindow.py          # Maintenance window commands
@@ -91,7 +219,7 @@ uptimebot/
 
 ---
 
-## 🔧 Setup
+## 🔧 Local Setup
 
 ### Step 1 — Get Credentials
 
@@ -100,18 +228,22 @@ uptimebot/
 | `API_ID` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `API_HASH` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `BOT_TOKEN` | Telegram → `@BotFather` → `/newbot` |
-| `UPTIMEROBOT_API_KEY` | [UptimeRobot Dashboard](https://dashboard.uptimerobot.com) → My Settings → API Settings → Main API Key |
-| `ALLOWED_USERS` | Telegram → `@userinfobot` → your user ID *(optional)* |
+| `UPTIMEROBOT_API_KEY` | [UptimeRobot Dashboard](https://dashboard.uptimerobot.com) → My Settings → API Settings → **Main API Key** |
+| `ALLOWED_USERS` | Telegram → `@userinfobot` → your numeric user ID *(optional — leave empty to allow everyone)* |
 
-### Step 2 — Local Testing
+### Step 2 — Install & Run
 
 ```bash
-# Install dependencies
-pip install kurigram aiohttp
+# Clone the repo
+git clone https://github.com/YOUR_USERNAME/uptimebot.git
+cd uptimebot
 
-# Setup environment
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
 cp .env.example .env
-# Fill in your values in the .env file
+# Edit .env and fill in your values
 
 # Run
 python bot.py
@@ -119,38 +251,39 @@ python bot.py
 
 ---
 
-## ☁️ Deploy — Railway
+## ☁️ Deployment
 
-1. **Push to GitHub:**
+### Railway
+
+1. Push to GitHub:
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
+git init && git add . && git commit -m "init"
 git remote add origin https://github.com/YOUR_USERNAME/uptimebot.git
 git push -u origin main
 ```
 
-2. **Deploy on Railway:**
-   - Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-   - Select your repository
-   - In the **Variables** tab, add:
-     ```
-     API_ID              = 12345678
-     API_HASH            = your_api_hash
-     BOT_TOKEN           = your_bot_token
-     UPTIMEROBOT_API_KEY = ur_your_key
-     ALLOWED_USERS       = 123456789   (optional)
-     ```
-   - Auto deploy! ✅
+2. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
+3. Select your repository
+4. In the **Variables** tab, add:
+
+```
+API_ID              = 12345678
+API_HASH            = your_api_hash
+BOT_TOKEN           = your_bot_token
+UPTIMEROBOT_API_KEY = ur_your_key
+ALLOWED_USERS       = 123456789        # optional
+```
+
+5. Auto deploy! ✅
 
 ---
 
-## ☁️ Deploy — Render
+### Render
 
 1. Push to GitHub (same as above)
 2. Go to [render.com](https://render.com) → **New** → **Background Worker**
 3. Connect your repository
-4. Settings:
+4. Set:
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `python bot.py`
 5. Add environment variables (same as Railway)
@@ -161,18 +294,18 @@ git push -u origin main
 ## ⚙️ Environment Variables
 
 ```env
-# Telegram MTProto credentials (from my.telegram.org)
+# Telegram MTProto credentials — from my.telegram.org
 API_ID=12345678
 API_HASH=your_api_hash_here
 
-# Bot token (from @BotFather)
+# Bot token — from @BotFather
 BOT_TOKEN=your_bot_token_here
 
-# UptimeRobot Main API Key
+# UptimeRobot Main API Key — from UptimeRobot Dashboard → My Settings
 UPTIMEROBOT_API_KEY=ur_your_key_here
 
-# Optional: Comma-separated Telegram user IDs allowed to use the bot
-# Leave empty to allow everyone
+# Optional: restrict bot access to specific Telegram user IDs (comma-separated)
+# Leave empty to allow all users
 ALLOWED_USERS=123456789,987654321
 ```
 
@@ -182,125 +315,37 @@ ALLOWED_USERS=123456789,987654321
 
 | Package | Purpose |
 |---------|---------|
-| `kurigram` | Telegram MTProto bot framework (Pyrogram fork — imports as `pyrogram`) |
-| `aiohttp` | Async HTTP client for UptimeRobot API calls |
+| [`kurigram`](https://github.com/KurimuzonAkuma/pyrogram) | Telegram MTProto framework — actively maintained Pyrogram fork (imports as `pyrogram`) |
+| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for all UptimeRobot API calls |
 
 ---
 
 ## 📝 Notes
 
-- Bot supports **private chats only** — it does not work in groups
-- For multi-step flows (`/add`, `/addcontact`, `/addmwindow`, `/addpsp`), use the **❌ Cancel** button to abort
-- UptimeRobot Free plan has a 10 API requests/minute rate limit
-- Use `/status` to find monitor IDs for pause/resume/delete commands
+- Works in **private chats only** — groups are not supported
+- Multi-step flows (`/add`, `/addcontact`, `/addmwindow`, `/addpsp`) can be cancelled anytime with `/cancel` or the **❌ Cancel** button
+- Abandoned sessions auto-expire after **10 minutes**
+- UptimeRobot Free plan: **10 API requests/minute** rate limit
+- Weekly maintenance windows require a day-of-week (1 = Mon … 7 = Sun)
+- Monthly maintenance windows require a day-of-month (1 – 28)
 
 ---
 
-## 🐛 Code Review — Issues Found
+## 🤝 Contributing
 
-The following bugs and improvements were identified during a full review of the codebase:
+Contributions are welcome!
 
-### 🟡 Bug — `CallbackQuery` import unused in `contacts.py`
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m "Add my feature"`
+4. Push to the branch: `git push origin feature/my-feature`
+5. Open a Pull Request
 
-**File:** `handlers/contacts.py`, line 2
-
-`CallbackQuery` is imported but never used in that file. Contact callback handling is done in `callbacks.py`.
-
-**Fix:**
-```python
-# Remove CallbackQuery from import
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-```
+Please keep PRs focused — one feature or fix per PR.
 
 ---
 
-### 🟡 Bug — `user_state` not cleared on `/add` URL validation failure
+## 📄 License
 
-**File:** `handlers/monitors.py` — `handle_text()`, step `add_url`
-
-When the user enters an invalid URL (not starting with `http`), the function returns early with a warning message — but the state is not changed, so the user can re-enter. This is actually correct behaviour. However, there is no timeout or cleanup mechanism for abandoned sessions. If a user starts `/add` and never finishes, their state entry leaks forever in `user_state`.
-
-**Recommended fix:** Add a periodic cleanup task or a per-user TTL:
-```python
-import time
-# Store state with timestamp: user_state[uid] = {"step": ..., "data": ..., "ts": time.time()}
-# Periodically clean up entries older than e.g. 10 minutes
-```
-
----
-
-### 🟡 Bug — `mw_value` field never set for non-Once maintenance windows
-
-**File:** `handlers/monitors.py` — state machine for `mw_type_` callback
-
-After the user selects a window type (Daily / Weekly / Monthly), the state jumps directly to `mw_time`. But the UptimeRobot API requires a `value` field for Weekly (day-of-week) and Monthly (day-of-month) windows. The `value` defaults to `""` (empty string), which will likely cause API errors for those types.
-
-**Fix:** After choosing Weekly or Monthly, add an extra step to collect the value:
-```python
-# For Weekly: ask "Enter day of week (1=Mon ... 7=Sun):"
-# For Monthly: ask "Enter day of month (1–28):"
-```
-
----
-
-### 🟡 Bug — `PSP_SORT` dict defined but never used
-
-**File:** `handlers/psp.py`, line 4
-
-```python
-PSP_SORT = {1:"Friendly Name A-Z", 2:"Friendly Name Z-A", ...}
-```
-
-This dict is never referenced anywhere. Either use it or remove it.
-
----
-
-### 🟡 Minor — Inconsistent "Back to Menu" buttons
-
-Some callback views (e.g. `status`, `stats`, `alerts`) have no **🔙 Menu** button, while others (e.g. `account`, `contacts`) do. This makes navigation inconsistent.
-
-**Fix:** Add a back button to the status/stats/alerts inline keyboards:
-```python
-markup = InlineKeyboardMarkup([
-    [
-        InlineKeyboardButton("🔄 Refresh", callback_data="status"),
-        InlineKeyboardButton("📈 Stats",   callback_data="stats"),
-        InlineKeyboardButton("🔔 Alerts",  callback_data="alerts"),
-    ],
-    [InlineKeyboardButton("🔙 Menu", callback_data="menu")],  # ← add this
-])
-```
-
----
-
-### 🟡 Minor — `/alerts` and `/stats` have no back/refresh buttons (command version)
-
-`build_stats()` and `build_alerts()` return plain strings with no inline markup. When called from the callback handler these get edited into messages with no buttons, leaving the user stuck without navigation. The `build_status()` function correctly returns markup — the others should too.
-
----
-
-### 🟢 Suggestion — Pin package versions in requirements.txt
-
-```
-kurigram==<latest>
-aiohttp==3.10.5
-```
-
-Unpinned packages can break on new major versions.
-
----
-
-### 🟢 Suggestion — Add `/cancel` as a proper command handler
-
-Currently, cancel is only reachable via an inline button. Users who type `/cancel` in a multi-step flow get no response (the command is not in the exclusion list of `handle_text`, but there is no `/cancel` command handler registered). Add:
-
-```python
-@app.on_message(filters.command("cancel") & filters.private)
-async def cmd_cancel(client, message):
-    user_state.pop(message.from_user.id, None)
-    await message.reply("❌ Operation cancelled.", quote=True)
-```
-
-And add `"cancel"` to the exclusion list in the text handler filter.
-
----
+This project is licensed under the **MIT License** — free to use, modify, and distribute.  
+See [`LICENSE`](LICENSE) for full details.
