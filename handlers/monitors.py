@@ -143,7 +143,8 @@ def register(app: Client):
         "start","menu","setkey","mykey","deletekey",
         "status","stats","alerts","pause","resume",
         "delete","add","cancel","account","contacts","addcontact","delcontact",
-        "mwindow","addmwindow","delmwindow","psp","addpsp","delpsp"
+        "mwindow","addmwindow","delmwindow","psp","addpsp","delpsp",
+        "broadcast","ban","unban","bannedlist","botstats","restart","setfsub","delfsub"
     ]))
     async def handle_text(client: Client, message: Message):
         uid   = message.from_user.id
