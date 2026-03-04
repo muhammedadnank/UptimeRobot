@@ -8,7 +8,7 @@ def register(app: Client):
     @app.on_message(filters.command("account") & filters.private)
     async def cmd_account(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent = await message.reply("⏳ Fetching account details…", quote=True)
+        sent = await message.reply("⏳ Fetching account details…")
         acc  = await get_api().get_account_details()
         if not acc:
             await sent.edit_text("❌ Could not fetch account details.")
