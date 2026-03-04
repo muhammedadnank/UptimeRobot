@@ -1,24 +1,27 @@
 from pyrogram import Client
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from utils import is_authorized, get_api
+from utils import get_api_for
+from db import delete_user
 from handlers.monitors import build_status, build_stats, build_alerts, user_state, _set_state, _get_state
+
+NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
 
 
 def main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📊 Status",   callback_data="status"),
-            InlineKeyboardButton("📈 Stats",    callback_data="stats"),
-            InlineKeyboardButton("🔔 Alerts",   callback_data="alerts"),
+            InlineKeyboardButton("📊 Status",      callback_data="status"),
+            InlineKeyboardButton("📈 Stats",        callback_data="stats"),
+            InlineKeyboardButton("🔔 Alerts",       callback_data="alerts"),
         ],
         [
-            InlineKeyboardButton("👤 Account",  callback_data="account"),
-            InlineKeyboardButton("📬 Contacts", callback_data="contacts"),
-            InlineKeyboardButton("🪟 MWindows", callback_data="mwindow"),
+            InlineKeyboardButton("👤 Account",      callback_data="account"),
+            InlineKeyboardButton("📬 Contacts",     callback_data="contacts"),
+            InlineKeyboardButton("🪟 MWindows",     callback_data="mwindow"),
         ],
         [
-            InlineKeyboardButton("📄 PSP",         callback_data="psp"),
-            InlineKeyboardButton("➕ Add Monitor", callback_data="add_monitor"),
+            InlineKeyboardButton("📄 PSP",          callback_data="psp"),
+            InlineKeyboardButton("➕ Add Monitor",  callback_data="add_monitor"),
         ],
     ])
 
@@ -27,24 +30,41 @@ def register(app: Client):
 
     @app.on_callback_query()
     async def on_callback(client: Client, query: CallbackQuery):
-        if not is_authorized(query.from_user.id):
-            await query.answer("⛔ Access Denied", show_alert=True)
-            return
-
         await query.answer()
         data = query.data
         uid  = query.from_user.id
-        api  = get_api()
+        api  = await get_api_for(uid)
 
-        # ── Menu ──────────────────────────────────────────────────────────────
+        # Commands that don't need API key
+        if data == "cancel":
+            user_state.pop(uid, None)
+            await query.message.edit_text("❌ Operation cancelled.", reply_markup=None)
+            return
+
+        if data == "confirm_deletekey":
+            ok = await delete_user(uid)
+            await query.message.edit_text(
+                "🗑️ API key deleted." if ok else "❌ Failed to delete key."
+            )
+            return
+
         if data == "menu":
+            if not api:
+                await query.message.edit_text(NO_KEY_MSG)
+                return
             await query.message.edit_text(
                 "🖥️ **UptimeRobot Control Panel**\nChoose an action:",
                 reply_markup=main_keyboard()
             )
+            return
+
+        # All remaining callbacks need API key
+        if not api:
+            await query.message.edit_text(NO_KEY_MSG)
+            return
 
         # ── Monitor views ─────────────────────────────────────────────────────
-        elif data == "status":
+        if data == "status":
             text, markup = await build_status(api)
             await query.message.edit_text(text, reply_markup=markup)
 
@@ -62,15 +82,15 @@ def register(app: Client):
             if not acc:
                 await query.message.edit_text("❌ Could not fetch account details.")
                 return
-            used  = acc.get("up_monitors",0) + acc.get("down_monitors",0) + acc.get("paused_monitors",0)
-            text  = (
+            used = acc.get("up_monitors", 0) + acc.get("down_monitors", 0) + acc.get("paused_monitors", 0)
+            text = (
                 "👤 **Account Details**\n\n"
-                f"📧 Email: `{acc.get('email','?')}`\n"
-                f"📊 Monitors: `{used}` / `{acc.get('monitor_limit','?')}`\n"
-                f"⏱ Interval: every `{acc.get('monitor_interval','?')}` min\n\n"
-                f"✅ Up: `{acc.get('up_monitors',0)}`  "
-                f"🔴 Down: `{acc.get('down_monitors',0)}`  "
-                f"⏸️ Paused: `{acc.get('paused_monitors',0)}`"
+                f"📧 Email: `{acc.get('email', '?')}`\n"
+                f"📊 Monitors: `{used}` / `{acc.get('monitor_limit', '?')}`\n"
+                f"⏱ Interval: every `{acc.get('monitor_interval', '?')}` min\n\n"
+                f"✅ Up: `{acc.get('up_monitors', 0)}`  "
+                f"🔴 Down: `{acc.get('down_monitors', 0)}`  "
+                f"⏸️ Paused: `{acc.get('paused_monitors', 0)}`"
             )
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Menu", callback_data="menu")]])
             await query.message.edit_text(text, reply_markup=markup)
@@ -89,12 +109,12 @@ def register(app: Client):
             if not contacts:
                 text = "📭 No alert contacts found."
             else:
-                CTYPE = {1:"SMS",2:"Email",3:"Webhook",9:"Slack",11:"Telegram",14:"Splunk",15:"Teams"}
+                CTYPE = {1:"SMS", 2:"Email", 3:"Webhook", 9:"Slack", 11:"Telegram", 14:"Splunk", 15:"Teams"}
                 lines = ["📬 **Alert Contacts**\n"]
                 for c in contacts:
                     lines.append(
-                        f"📌 **{c.get('friendly_name','?')}** — {CTYPE.get(c.get('type',0), 'Other')}\n"
-                        f"   `{c.get('value','')}` | 🆔 `{c.get('id','')}`\n"
+                        f"📌 **{c.get('friendly_name', '?')}** — {CTYPE.get(c.get('type', 0), 'Other')}\n"
+                        f"   `{c.get('value', '')}` | 🆔 `{c.get('id', '')}`\n"
                     )
                 text = "\n".join(lines)
             markup = InlineKeyboardMarkup([
@@ -117,12 +137,12 @@ def register(app: Client):
             if not windows:
                 text = "🪟 No maintenance windows found."
             else:
-                MW = {1:"Once",2:"Daily",3:"Weekly",4:"Monthly"}
+                MW = {1:"Once", 2:"Daily", 3:"Weekly", 4:"Monthly"}
                 lines = ["🪟 **Maintenance Windows**\n"]
                 for w in windows:
                     lines.append(
-                        f"🕐 **{w.get('friendly_name','?')}** — {MW.get(w.get('type',0),'?')}\n"
-                        f"   ⏰ `{w.get('start_time','?')}` • ⏱ `{w.get('duration','?')}` min | 🆔 `{w.get('id','')}`\n"
+                        f"🕐 **{w.get('friendly_name', '?')}** — {MW.get(w.get('type', 0), '?')}\n"
+                        f"   ⏰ `{w.get('start_time', '?')}` • ⏱ `{w.get('duration', '?')}` min | 🆔 `{w.get('id', '')}`\n"
                     )
                 text = "\n".join(lines)
             markup = InlineKeyboardMarkup([
@@ -147,8 +167,8 @@ def register(app: Client):
             else:
                 lines = ["📄 **Public Status Pages**\n"]
                 for p in psps:
-                    sd = p.get("custom_domain") or f"{p.get('subdomain','?')}.uptimerobot.com"
-                    lines.append(f"🌐 **{p.get('friendly_name','?')}**\n   🔗 `{sd}` | 🆔 `{p.get('id','')}`\n")
+                    sd = p.get("custom_domain") or f"{p.get('subdomain', '?')}.uptimerobot.com"
+                    lines.append(f"🌐 **{p.get('friendly_name', '?')}**\n   🔗 `{sd}` | 🆔 `{p.get('id', '')}`\n")
                 text = "\n".join(lines)
             markup = InlineKeyboardMarkup([
                 [InlineKeyboardButton("➕ Add Page", callback_data="add_psp")],
@@ -165,14 +185,14 @@ def register(app: Client):
                 reply_markup=markup
             )
 
-        # ── Add monitor: type selection ───────────────────────────────────────
+        # ── Add monitor type ──────────────────────────────────────────────────
         elif data.startswith("add_type_"):
             mtype = int(data.split("_")[-1])
             state = _get_state(uid)
             if not state or state.get("step") != "add_type":
                 await query.message.edit_text("⚠️ Session expired. Use /add again.")
                 return
-            TYPE_LABELS = {1:"HTTP(s)", 2:"Keyword", 3:"Ping", 4:"Port"}
+            TYPE_LABELS = {1: "HTTP(s)", 2: "Keyword", 3: "Ping", 4: "Port"}
             mon_name = state["data"].get("name", "?")
             mon_url  = state["data"].get("url", "?")
             user_state.pop(uid, None)
@@ -183,13 +203,13 @@ def register(app: Client):
                     f"✅ **Monitor created!**\n\n"
                     f"📛 Name: `{mon_name}`\n"
                     f"🔗 URL: `{mon_url}`\n"
-                    f"🔧 Type: {TYPE_LABELS.get(mtype,'?')}\n"
+                    f"🔧 Type: {TYPE_LABELS.get(mtype, '?')}\n"
                     f"🆔 ID: `{mid}`"
                 )
             else:
                 await query.message.edit_text("❌ Failed to create monitor. Check URL and try again.")
 
-        # ── Contact type selection ────────────────────────────────────────────
+        # ── Contact type ──────────────────────────────────────────────────────
         elif data.startswith("ct_"):
             ctype = int(data.split("_")[-1])
             state = _get_state(uid)
@@ -198,7 +218,7 @@ def register(app: Client):
                 return
             state["data"]["type"] = ctype
             state["step"] = "contact_value"
-            LABELS = {1:"phone number", 2:"email address", 3:"webhook URL", 9:"Slack URL", 11:"chat ID"}
+            LABELS = {1: "phone number", 2: "email address", 3: "webhook URL", 9: "Slack URL", 11: "chat ID"}
             label  = LABELS.get(ctype, "value")
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
             await query.message.edit_text(
@@ -206,7 +226,7 @@ def register(app: Client):
                 reply_markup=markup
             )
 
-        # ── Maintenance window type selection ─────────────────────────────────
+        # ── Maintenance window type ───────────────────────────────────────────
         elif data.startswith("mw_type_"):
             mtype = int(data.split("_")[-1])
             state = _get_state(uid)
@@ -215,8 +235,6 @@ def register(app: Client):
                 return
             state["data"]["mw_type"] = mtype
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-
-            # Weekly needs day-of-week, Monthly needs day-of-month
             if mtype == 3:
                 state["step"] = "mw_value"
                 state["data"]["mw_value_hint"] = "weekly"
@@ -232,7 +250,6 @@ def register(app: Client):
                     reply_markup=markup
                 )
             else:
-                # Once or Daily — no value needed
                 state["step"] = "mw_time"
                 state["data"]["mw_value"] = ""
                 await query.message.edit_text(
@@ -240,7 +257,7 @@ def register(app: Client):
                     reply_markup=markup
                 )
 
-        # ── PSP: monitor selection ────────────────────────────────────────────
+        # ── PSP monitor selection ─────────────────────────────────────────────
         elif data == "psp_monitors_all":
             state = _get_state(uid)
             if not state or "name" not in state.get("data", {}):
@@ -295,8 +312,3 @@ def register(app: Client):
             await query.message.edit_text(
                 f"🗑️ Status page `{pid}` deleted." if ok else f"❌ Failed to delete PSP `{pid}`."
             )
-
-        # ── Cancel ────────────────────────────────────────────────────────────
-        elif data == "cancel":
-            user_state.pop(uid, None)
-            await query.message.edit_text("❌ Operation cancelled.", reply_markup=None)
