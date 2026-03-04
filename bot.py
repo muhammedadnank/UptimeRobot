@@ -46,7 +46,7 @@ async def cmd_start(client: Client, message: Message):
         "• /cancel — Cancel current operation\n"
         "• /menu — Interactive panel",
         reply_markup=main_keyboard(),
-        quote=True,
+       
     )
 
 # ── /menu ──────────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ async def cmd_menu(client: Client, message: Message):
     await message.reply(
         "🖥️ **UptimeRobot Control Panel**\nChoose an action:",
         reply_markup=main_keyboard(),
-        quote=True,
+       
     )
 
 
