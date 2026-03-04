@@ -27,7 +27,7 @@ app: Client = None  # type: ignore[assignment]
 NO_KEY_MSG = (
     "🔑 **API Key not set!**\n\n"
     "Please set your UptimeRobot API key first:\n"
-    "`/setkey ur_your_api_key_here`\n\n"
+    "/setkey ur_xxxxx` or `/setkey u1234567-xxxx\n\n"
     "Get your key from:\n"
     "dashboard.uptimerobot.com → Integrations → API → Main API Key"
 )
@@ -88,14 +88,25 @@ def _register_core_handlers(client: Client):
         args = message.command[1:]
         if not args:
             await message.reply(
-                "Usage: `/setkey ur_your_api_key_here`\n\n"
+                "Usage: `/setkey <api_key>`\n\n"
+                "Accepted formats:\n"
+                "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
+                "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
                 "Get your key from:\n"
-                "dashboard.uptimerobot.com → Integrations → API → Main API Key"
+                "dashboard.uptimerobot.com → Integrations & API → API"
             )
             return
         api_key = args[0].strip()
-        if not api_key.startswith("ur_"):
-            await message.reply("⚠️ Invalid key format. UptimeRobot API keys start with `ur_`")
+        import re
+        if not re.match(r"^(ur_[a-f0-9]+|u[0-9]+-[a-f0-9]+)$", api_key):
+            await message.reply(
+                "⚠️ Invalid key format.\n\n"
+                "Accepted formats:\n"
+                "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
+                "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
+                "Find your key at:\n"
+                "dashboard.uptimerobot.com → Integrations & API → API"
+            )
             return
         ok = await upsert_user(message.from_user.id, api_key)
         if ok:
