@@ -2,12 +2,14 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![Framework](https://img.shields.io/badge/Framework-Kurigram-blue?logo=telegram&logoColor=white)
+![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-green?logo=mongodb&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Deploy](https://img.shields.io/badge/Deploy-Railway%20%7C%20Render-blueviolet)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 Full control of your **UptimeRobot** account directly from Telegram.  
-Built with **Kurigram** (active Pyrogram fork) and **aiohttp** — fully async, private-chat only.
+**Multi-user** — each user links their own UptimeRobot API key via `/setkey`.  
+Built with **Kurigram**, **aiohttp**, and **MongoDB Atlas** (free tier).
 
 ---
 
@@ -15,16 +17,33 @@ Built with **Kurigram** (active Pyrogram fork) and **aiohttp** — fully async, 
 
 | Category | What you can do |
 |----------|----------------|
+| 🔑 **Auth** | Each user sets their own UptimeRobot API key — stored securely in MongoDB |
 | 🖥️ **Monitors** | View status (Up/Down/Paused), uptime % (7d/30d/90d), response times, add/pause/resume/delete |
 | 👤 **Account** | View email, monitor limit, check interval, Up/Down/Paused counts |
 | 🔔 **Alert Contacts** | List, add (Email/Telegram/Webhook/SMS/Slack), delete |
 | 🪟 **Maintenance Windows** | List, create (Once/Daily/Weekly/Monthly), delete |
 | 📄 **Public Status Pages** | List, create, delete |
-| 🔒 **Security** | Restrict access via `ALLOWED_USERS`, confirmation prompt on all deletes |
+| 🔒 **Security** | Per-user API key isolation, confirmation prompt on all deletes |
 
 ---
 
 ## 🖼️ Usage Examples
+
+### First Time Setup
+```
+You:  /start
+
+Bot:  👋 UptimeRobot Bot
+      ⚠️ No API key set yet. Use /setkey to get started.
+
+You:  /setkey ur_your_api_key_here
+
+Bot:  ✅ API key saved!
+      Your UptimeRobot account is now linked.
+      Use /menu or /status to get started.
+```
+
+---
 
 ### `/menu` — Interactive Control Panel
 ```
@@ -62,6 +81,36 @@ Choose an action:
 
 ---
 
+### `/add` — Add New Monitor (guided flow)
+```
+You:  /add
+
+Bot:  ➕ Add New Monitor
+      Step 1/3 — Enter a friendly name:
+      [ ❌ Cancel ]
+
+You:  My API
+
+Bot:  Step 2/3 — Enter the URL:
+      [ ❌ Cancel ]
+
+You:  https://api.mysite.com/health
+
+Bot:  Step 3/3 — Choose monitor type:
+      [ 🌐 HTTP(s) ] [ 🔑 Keyword ]
+      [ 📡 Ping    ] [ 🔌 Port    ]
+
+You:  [ 🌐 HTTP(s) ]
+
+Bot:  ✅ Monitor created!
+      📛 Name: My API
+      🔗 URL:  https://api.mysite.com/health
+      🔧 Type: HTTP(s)
+      🆔 ID:   987654321
+```
+
+---
+
 ### `/stats` — Uptime & Response Times
 ```
 📈 Monitor Stats
@@ -72,43 +121,8 @@ Choose an action:
 🖥️ API Server
    ⏱ Avg: 87 ms  | 7d: 100%   | 30d: 99.99% | 90d: 99.97%
 
-🖥️ Staging DB
-   ⏱ Avg: N/A    | 7d: 94.20% | 30d: 97.10% | 90d: 98.50%
-
 [ 📊 Status ] [ 🔔 Alerts ]
 [ 🔙 Menu ]
-```
-
----
-
-### `/add` — Add New Monitor (guided flow)
-```
-You:  /add
-
-Bot:  ➕ Add New Monitor
-      Step 1/3 — Enter a friendly name for the monitor:
-      [ ❌ Cancel ]
-
-You:  My New API
-
-Bot:  Step 2/3 — Enter the URL to monitor:
-      (e.g. https://example.com)
-      [ ❌ Cancel ]
-
-You:  https://api.mysite.com/health
-
-Bot:  Step 3/3 — Choose monitor type:
-      [ 🌐 HTTP(s) ] [ 🔑 Keyword ]
-      [ 📡 Ping    ] [ 🔌 Port    ]
-      [ ❌ Cancel ]
-
-You:  [ 🌐 HTTP(s) ]
-
-Bot:  ✅ Monitor created!
-      📛 Name: My New API
-      🔗 URL:  https://api.mysite.com/health
-      🔧 Type: HTTP(s)
-      🆔 ID:   987654321
 ```
 
 ---
@@ -120,10 +134,6 @@ Bot:  ✅ Monitor created!
 🖥️ Staging DB
    🔴 2025-01-15 03:42 — Went DOWN: Connection refused
    ✅ 2025-01-15 03:50 — Came UP
-   🔴 2025-01-14 21:17 — Went DOWN: Timeout
-
-🖥️ My Website
-   ✅ 2025-01-13 08:00 — Came UP
 
 [ 📊 Status ] [ 📈 Stats ]
 [ 🔙 Menu ]
@@ -131,22 +141,14 @@ Bot:  ✅ Monitor created!
 
 ---
 
-### `/account` — Account Details
-```
-👤 Account Details
-
-📧 Email:    user@example.com
-📊 Monitors: 8 / 50
-⏱ Check interval: every 5 min
-
-✅ Up: 6  🔴 Down: 1  ⏸️ Paused: 1
-
-[ 🔙 Menu ]
-```
-
----
-
 ## 📋 Commands
+
+### 🔑 Account Setup
+| Command | Description |
+|---------|-------------|
+| `/setkey <api_key>` | Link your UptimeRobot API key |
+| `/mykey` | Check if your API key is set |
+| `/deletekey` | Remove your stored API key |
 
 ### General
 | Command | Description |
@@ -200,16 +202,17 @@ Bot:  ✅ Monitor created!
 
 ```
 uptimebot/
-├── bot.py                  # Entry point — /start, /menu, app init
+├── bot.py                  # Entry point — /start, /menu, /setkey, /mykey, /deletekey
+├── db.py                   # MongoDB layer — user CRUD via motor (async)
 ├── uptime_robot.py         # Async UptimeRobot API wrapper (aiohttp)
-├── utils.py                # Auth helpers & shared API instance
+├── utils.py                # get_api_for(user_id) — per-user API instance
 ├── requirements.txt        # Python dependencies
 ├── Procfile                # Process config (Railway / Render)
 ├── railway.toml            # Railway deployment config
 ├── .env.example            # Environment variable template
 └── handlers/
     ├── __init__.py
-    ├── monitors.py         # Monitor commands + multi-step state machine (with TTL)
+    ├── monitors.py         # Monitor commands + multi-step state machine (TTL: 10 min)
     ├── account.py          # /account command
     ├── contacts.py         # Alert contact commands
     ├── mwindow.py          # Maintenance window commands
@@ -228,10 +231,27 @@ uptimebot/
 | `API_ID` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `API_HASH` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `BOT_TOKEN` | Telegram → `@BotFather` → `/newbot` |
-| `UPTIMEROBOT_API_KEY` | [UptimeRobot Dashboard](https://dashboard.uptimerobot.com) → My Settings → API Settings → **Main API Key** |
-| `ALLOWED_USERS` | Telegram → `@userinfobot` → your numeric user ID *(optional — leave empty to allow everyone)* |
+| `MONGODB_URI` | [cloud.mongodb.com](https://cloud.mongodb.com) → Free Cluster → Connect → Drivers (see below) |
 
-### Step 2 — Install & Run
+> **UptimeRobot API Key** is no longer an env variable — each user sets it themselves via `/setkey` in the bot.
+
+---
+
+### Step 2 — MongoDB Atlas Setup (Free)
+
+1. Go to [cloud.mongodb.com](https://cloud.mongodb.com) → **Sign up / Log in**
+2. **Create a free cluster** → Choose **M0 Free** tier
+3. **Database Access** → Add a user with password
+4. **Network Access** → Allow access from anywhere (`0.0.0.0/0`)
+5. **Connect** → **Drivers** → Copy the connection string:
+   ```
+   mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+   ```
+6. Replace `<user>` and `<password>` with your DB credentials
+
+---
+
+### Step 3 — Install & Run
 
 ```bash
 # Clone the repo
@@ -267,11 +287,10 @@ git push -u origin main
 4. In the **Variables** tab, add:
 
 ```
-API_ID              = 12345678
-API_HASH            = your_api_hash
-BOT_TOKEN           = your_bot_token
-UPTIMEROBOT_API_KEY = ur_your_key
-ALLOWED_USERS       = 123456789        # optional
+API_ID       = 12345678
+API_HASH     = your_api_hash
+BOT_TOKEN    = your_bot_token
+MONGODB_URI  = mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/...
 ```
 
 5. Auto deploy! ✅
@@ -301,13 +320,12 @@ API_HASH=your_api_hash_here
 # Bot token — from @BotFather
 BOT_TOKEN=your_bot_token_here
 
-# UptimeRobot Main API Key — from UptimeRobot Dashboard → My Settings
-UPTIMEROBOT_API_KEY=ur_your_key_here
-
-# Optional: restrict bot access to specific Telegram user IDs (comma-separated)
-# Leave empty to allow all users
-ALLOWED_USERS=123456789,987654321
+# MongoDB Atlas connection string — from cloud.mongodb.com
+# Replace <user> and <password> with your DB credentials
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 ```
+
+> Each user's UptimeRobot API key is stored in MongoDB — no longer an env variable.
 
 ---
 
@@ -315,8 +333,23 @@ ALLOWED_USERS=123456789,987654321
 
 | Package | Purpose |
 |---------|---------|
-| [`kurigram`](https://github.com/KurimuzonAkuma/pyrogram) | Telegram MTProto framework — actively maintained Pyrogram fork (imports as `pyrogram`) |
-| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for all UptimeRobot API calls |
+| [`kurigram`](https://github.com/KurimuzonAkuma/pyrogram) | Telegram MTProto framework — actively maintained Pyrogram fork |
+| [`motor`](https://motor.readthedocs.io) | Async MongoDB driver for Python |
+| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for UptimeRobot API calls |
+
+---
+
+## 🗄️ Database Schema
+
+**Collection: `users`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `telegram_id` | `int` | Unique index — Telegram user ID |
+| `api_key` | `str` | UptimeRobot API key (starts with `ur_`) |
+| `created_at` | `datetime` | First time user ran /setkey |
+| `updated_at` | `datetime` | Last time API key was updated |
+| `last_active` | `datetime` | Last time user made an API call |
 
 ---
 
@@ -328,6 +361,7 @@ ALLOWED_USERS=123456789,987654321
 - UptimeRobot Free plan: **10 API requests/minute** rate limit
 - Weekly maintenance windows require a day-of-week (1 = Mon … 7 = Sun)
 - Monthly maintenance windows require a day-of-month (1 – 28)
+- API keys are stored as plain text in MongoDB — use Atlas **encryption at rest** for extra security
 
 ---
 
