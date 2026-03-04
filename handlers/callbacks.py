@@ -227,7 +227,7 @@ def register(app: Client):
                 return
             state["data"]["type"] = ctype
             state["step"] = "contact_value"
-            LABELS = {1: "phone number", 2: "email address", 3: "webhook URL", 9: "Slack URL", 11: "chat ID"}
+            LABELS = {2: "email address", 3: "webhook URL", 9: "Slack webhook URL", 11: "Telegram chat ID"}
             label  = LABELS.get(ctype, "value")
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
             await safe_edit(query.message, 
