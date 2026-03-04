@@ -1,10 +1,19 @@
 from pyrogram import Client
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.errors import MessageNotModified
 from utils import get_api_for
 from db import delete_user
 from handlers.monitors import build_status, build_stats, build_alerts, user_state, _set_state, _get_state
 
 NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
+
+
+async def safe_edit(message, text, reply_markup=None):
+    """Edit a message, silently ignoring MessageNotModified errors (e.g. from double-taps)."""
+    try:
+        await message.edit_text(text, reply_markup=reply_markup)
+    except MessageNotModified:
+        pass
 
 
 def main_keyboard() -> InlineKeyboardMarkup:
@@ -38,21 +47,21 @@ def register(app: Client):
         # Commands that don't need API key
         if data == "cancel":
             user_state.pop(uid, None)
-            await query.message.edit_text("❌ Operation cancelled.", reply_markup=None)
+            await safe_edit(query.message, "❌ Operation cancelled.", reply_markup=None)
             return
 
         if data == "confirm_deletekey":
             ok = await delete_user(uid)
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 "🗑️ API key deleted." if ok else "❌ Failed to delete key."
             )
             return
 
         if data == "menu":
             if not api:
-                await query.message.edit_text(NO_KEY_MSG)
+                await safe_edit(query.message, NO_KEY_MSG)
                 return
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 "🖥️ **UptimeRobot Control Panel**\nChoose an action:",
                 reply_markup=main_keyboard()
             )
@@ -60,27 +69,27 @@ def register(app: Client):
 
         # All remaining callbacks need API key
         if not api:
-            await query.message.edit_text(NO_KEY_MSG)
+            await safe_edit(query.message, NO_KEY_MSG)
             return
 
         # ── Monitor views ─────────────────────────────────────────────────────
         if data == "status":
             text, markup = await build_status(api)
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         elif data == "stats":
             text, markup = await build_stats(api)
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         elif data == "alerts":
             text, markup = await build_alerts(api)
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         # ── Account ───────────────────────────────────────────────────────────
         elif data == "account":
             acc = await api.get_account_details()
             if not acc:
-                await query.message.edit_text("❌ Could not fetch account details.")
+                await safe_edit(query.message, "❌ Could not fetch account details.")
                 return
             used = acc.get("up_monitors", 0) + acc.get("down_monitors", 0) + acc.get("paused_monitors", 0)
             text = (
@@ -93,14 +102,14 @@ def register(app: Client):
                 f"⏸️ Paused: `{acc.get('paused_monitors', 0)}`"
             )
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Menu", callback_data="menu")]])
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         # ── Contacts ──────────────────────────────────────────────────────────
         elif data in ("contacts", "add_contact"):
             if data == "add_contact":
                 _set_state(uid, "contact_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "➕ **Add Alert Contact**\n\nEnter a **friendly name**:",
                     reply_markup=markup
                 )
@@ -121,14 +130,14 @@ def register(app: Client):
                 [InlineKeyboardButton("➕ Add Contact", callback_data="add_contact")],
                 [InlineKeyboardButton("🔙 Menu",        callback_data="menu")],
             ])
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         # ── Maintenance Windows ───────────────────────────────────────────────
         elif data in ("mwindow", "add_mwindow"):
             if data == "add_mwindow":
                 _set_state(uid, "mw_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "🪟 **New Maintenance Window**\n\nEnter a **name**:",
                     reply_markup=markup
                 )
@@ -149,14 +158,14 @@ def register(app: Client):
                 [InlineKeyboardButton("➕ Add Window", callback_data="add_mwindow")],
                 [InlineKeyboardButton("🔙 Menu",       callback_data="menu")],
             ])
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         # ── PSP ───────────────────────────────────────────────────────────────
         elif data in ("psp", "add_psp"):
             if data == "add_psp":
                 _set_state(uid, "psp_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "📄 **New Status Page**\n\nEnter a **name**:",
                     reply_markup=markup
                 )
@@ -174,13 +183,13 @@ def register(app: Client):
                 [InlineKeyboardButton("➕ Add Page", callback_data="add_psp")],
                 [InlineKeyboardButton("🔙 Menu",     callback_data="menu")],
             ])
-            await query.message.edit_text(text, reply_markup=markup)
+            await safe_edit(query.message, text, reply_markup=markup)
 
         # ── Add monitor ───────────────────────────────────────────────────────
         elif data == "add_monitor":
             _set_state(uid, "add_name")
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 "➕ **Add New Monitor**\n\nStep 1/3 — Enter a **friendly name**:",
                 reply_markup=markup
             )
@@ -190,7 +199,7 @@ def register(app: Client):
             mtype = int(data.split("_")[-1])
             state = _get_state(uid)
             if not state or state.get("step") != "add_type":
-                await query.message.edit_text("⚠️ Session expired. Use /add again.")
+                await safe_edit(query.message, "⚠️ Session expired. Use /add again.")
                 return
             TYPE_LABELS = {1: "HTTP(s)", 2: "Keyword", 3: "Ping", 4: "Port"}
             mon_name = state["data"].get("name", "?")
@@ -199,7 +208,7 @@ def register(app: Client):
             result = await api.new_monitor(mon_name, mon_url, mtype)
             if result:
                 mid = result.get("monitor", {}).get("id", "?")
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     f"✅ **Monitor created!**\n\n"
                     f"📛 Name: `{mon_name}`\n"
                     f"🔗 URL: `{mon_url}`\n"
@@ -207,21 +216,21 @@ def register(app: Client):
                     f"🆔 ID: `{mid}`"
                 )
             else:
-                await query.message.edit_text("❌ Failed to create monitor. Check URL and try again.")
+                await safe_edit(query.message, "❌ Failed to create monitor. Check URL and try again.")
 
         # ── Contact type ──────────────────────────────────────────────────────
         elif data.startswith("ct_"):
             ctype = int(data.split("_")[-1])
             state = _get_state(uid)
             if not state or state.get("step") != "contact_type":
-                await query.message.edit_text("⚠️ Session expired. Try again.")
+                await safe_edit(query.message, "⚠️ Session expired. Try again.")
                 return
             state["data"]["type"] = ctype
             state["step"] = "contact_value"
             LABELS = {1: "phone number", 2: "email address", 3: "webhook URL", 9: "Slack URL", 11: "chat ID"}
             label  = LABELS.get(ctype, "value")
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 f"Enter the **{label}** for this contact:",
                 reply_markup=markup
             )
@@ -231,28 +240,28 @@ def register(app: Client):
             mtype = int(data.split("_")[-1])
             state = _get_state(uid)
             if not state or state.get("step") != "mw_type":
-                await query.message.edit_text("⚠️ Session expired. Try again.")
+                await safe_edit(query.message, "⚠️ Session expired. Try again.")
                 return
             state["data"]["mw_type"] = mtype
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
             if mtype == 3:
                 state["step"] = "mw_value"
                 state["data"]["mw_value_hint"] = "weekly"
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "Enter **day of week** (1 = Monday … 7 = Sunday):",
                     reply_markup=markup
                 )
             elif mtype == 4:
                 state["step"] = "mw_value"
                 state["data"]["mw_value_hint"] = "monthly"
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "Enter **day of month** (1 – 28):",
                     reply_markup=markup
                 )
             else:
                 state["step"] = "mw_time"
                 state["data"]["mw_value"] = ""
-                await query.message.edit_text(
+                await safe_edit(query.message, 
                     "Enter **start time** in `HH:MM` format (UTC):\n(e.g. `02:00` for 2 AM UTC)",
                     reply_markup=markup
                 )
@@ -261,25 +270,25 @@ def register(app: Client):
         elif data == "psp_monitors_all":
             state = _get_state(uid)
             if not state or "name" not in state.get("data", {}):
-                await query.message.edit_text("⚠️ Session expired. Try again.")
+                await safe_edit(query.message, "⚠️ Session expired. Try again.")
                 return
             psp_name = state["data"]["name"]
             user_state.pop(uid, None)
             result = await api.new_psp(psp_name, monitors="0")
             if result:
                 pid = result.get("psp", {}).get("id", "?")
-                await query.message.edit_text(f"✅ Status page created!\nID: `{pid}`")
+                await safe_edit(query.message, f"✅ Status page created!\nID: `{pid}`")
             else:
-                await query.message.edit_text("❌ Failed to create status page.")
+                await safe_edit(query.message, "❌ Failed to create status page.")
 
         elif data == "psp_monitors_custom":
             state = _get_state(uid)
             if not state or "name" not in state.get("data", {}):
-                await query.message.edit_text("⚠️ Session expired. Try again.")
+                await safe_edit(query.message, "⚠️ Session expired. Try again.")
                 return
             state["step"] = "psp_monitor_ids"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 "Enter **monitor IDs** separated by `-`:\n(e.g. `12345-67890`)\nGet IDs from /status",
                 reply_markup=markup
             )
@@ -288,27 +297,27 @@ def register(app: Client):
         elif data.startswith("confirm_delete_"):
             mid = data.replace("confirm_delete_", "")
             ok  = await api.delete_monitor(mid)
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 f"🗑️ Monitor `{mid}` deleted." if ok else f"❌ Failed to delete `{mid}`."
             )
 
         elif data.startswith("confirm_delcontact_"):
             cid = data.replace("confirm_delcontact_", "")
             ok  = await api.delete_alert_contact(cid)
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 f"🗑️ Contact `{cid}` deleted." if ok else f"❌ Failed to delete contact `{cid}`."
             )
 
         elif data.startswith("confirm_delmwindow_"):
             wid = data.replace("confirm_delmwindow_", "")
             ok  = await api.delete_mwindow(wid)
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 f"🗑️ Window `{wid}` deleted." if ok else f"❌ Failed to delete window `{wid}`."
             )
 
         elif data.startswith("confirm_delpsp_"):
             pid = data.replace("confirm_delpsp_", "")
             ok  = await api.delete_psp(pid)
-            await query.message.edit_text(
+            await safe_edit(query.message, 
                 f"🗑️ Status page `{pid}` deleted." if ok else f"❌ Failed to delete PSP `{pid}`."
             )
