@@ -69,7 +69,12 @@ def _register_core_handlers(client: Client):
             "• /addpsp — Add status page\n"
             "• /delpsp `<id>` — Delete status page\n"
             "• /cancel — Cancel current operation\n"
-            "• /menu — Interactive panel",
+            "• /menu — Interactive panel\n\n"
+            "👮 **Admin Commands:**\n"
+            "• /botstats — Bot usage statistics\n"
+            "• /broadcast — Broadcast a message\n"
+            "• /ban `/unban` — Manage users\n"
+            "• /setfsub `/delfsub` — Force subscribe",
             reply_markup=main_keyboard() if has_key else None,
         )
 
