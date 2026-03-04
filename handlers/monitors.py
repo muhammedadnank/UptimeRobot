@@ -34,7 +34,7 @@ def register(app: Client):
     @app.on_message(filters.command("status") & filters.private)
     async def cmd_status(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent = await message.reply("⏳ Fetching monitors…", quote=True)
+        sent = await message.reply("⏳ Fetching monitors…")
         text, markup = await build_status(get_api())
         await sent.edit_text(text, reply_markup=markup)
 
@@ -42,7 +42,7 @@ def register(app: Client):
     @app.on_message(filters.command("stats") & filters.private)
     async def cmd_stats(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent = await message.reply("⏳ Fetching stats…", quote=True)
+        sent = await message.reply("⏳ Fetching stats…")
         text, markup = await build_stats(get_api())
         await sent.edit_text(text, reply_markup=markup)
 
@@ -50,7 +50,7 @@ def register(app: Client):
     @app.on_message(filters.command("alerts") & filters.private)
     async def cmd_alerts(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
-        sent = await message.reply("⏳ Fetching alerts…", quote=True)
+        sent = await message.reply("⏳ Fetching alerts…")
         text, markup = await build_alerts(get_api())
         await sent.edit_text(text, reply_markup=markup)
 
@@ -60,12 +60,12 @@ def register(app: Client):
         if not is_authorized(message.from_user.id): return
         args = message.command[1:]
         if not args:
-            await message.reply("Usage: `/pause <monitor_id>`\nGet IDs from /status", quote=True)
+            await message.reply("Usage: `/pause <monitor_id>`\nGet IDs from /status")
             return
         ok = await get_api().pause_monitor(args[0])
         await message.reply(
             f"⏸️ Monitor `{args[0]}` paused." if ok else f"❌ Failed to pause `{args[0]}`.",
-            quote=True
+            
         )
 
     # ── /resume <id> ──────────────────────────────────────────────────────────
@@ -74,12 +74,12 @@ def register(app: Client):
         if not is_authorized(message.from_user.id): return
         args = message.command[1:]
         if not args:
-            await message.reply("Usage: `/resume <monitor_id>`\nGet IDs from /status", quote=True)
+            await message.reply("Usage: `/resume <monitor_id>`\nGet IDs from /status")
             return
         ok = await get_api().resume_monitor(args[0])
         await message.reply(
             f"▶️ Monitor `{args[0]}` resumed." if ok else f"❌ Failed to resume `{args[0]}`.",
-            quote=True
+            
         )
 
     # ── /delete <id> ─────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ def register(app: Client):
         if not is_authorized(message.from_user.id): return
         args = message.command[1:]
         if not args:
-            await message.reply("Usage: `/delete <monitor_id>`\nGet IDs from /status", quote=True)
+            await message.reply("Usage: `/delete <monitor_id>`\nGet IDs from /status")
             return
         mid = args[0]
         markup = InlineKeyboardMarkup([[
@@ -97,7 +97,7 @@ def register(app: Client):
         ]])
         await message.reply(
             f"⚠️ **Are you sure you want to delete monitor** `{mid}`?\nThis cannot be undone!",
-            reply_markup=markup, quote=True
+            reply_markup=markup
         )
 
     # ── /cancel ───────────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ def register(app: Client):
     async def cmd_cancel(client: Client, message: Message):
         if not is_authorized(message.from_user.id): return
         user_state.pop(message.from_user.id, None)
-        await message.reply("❌ Operation cancelled.", quote=True)
+        await message.reply("❌ Operation cancelled.")
 
     # ── /add — multi-step ─────────────────────────────────────────────────────
     @app.on_message(filters.command("add") & filters.private)
@@ -116,7 +116,7 @@ def register(app: Client):
         markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
         await message.reply(
             "➕ **Add New Monitor**\n\nStep 1/3 — Enter a **friendly name** for the monitor:",
-            reply_markup=markup, quote=True
+            reply_markup=markup
         )
 
     # ── Text message handler (multi-step state machine) ───────────────────────
@@ -141,11 +141,11 @@ def register(app: Client):
             data["name"] = text
             state["step"] = "add_url"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-            await message.reply("Step 2/3 — Enter the **URL** to monitor:\n(e.g. `https://example.com`)", reply_markup=markup, quote=True)
+            await message.reply("Step 2/3 — Enter the **URL** to monitor:\n(e.g. `https://example.com`)", reply_markup=markup)
 
         elif step == "add_url":
             if not text.startswith("http"):
-                await message.reply("⚠️ URL must start with `http://` or `https://`. Try again:", quote=True)
+                await message.reply("⚠️ URL must start with `http://` or `https://`. Try again:")
                 return
             data["url"] = text
             state["step"] = "add_type"
@@ -160,7 +160,7 @@ def register(app: Client):
                 ],
                 [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
             ])
-            await message.reply("Step 3/3 — Choose **monitor type**:", reply_markup=markup, quote=True)
+            await message.reply("Step 3/3 — Choose **monitor type**:", reply_markup=markup)
 
         # ── Alert contact add steps ────────────────────────────────────────
         elif step == "contact_name":
@@ -177,7 +177,7 @@ def register(app: Client):
                 ],
                 [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
             ])
-            await message.reply("Choose **contact type**:", reply_markup=markup, quote=True)
+            await message.reply("Choose **contact type**:", reply_markup=markup)
 
         elif step == "contact_value":
             data["value"] = text
@@ -185,9 +185,9 @@ def register(app: Client):
             user_state.pop(uid, None)
             if result:
                 cid = result.get("alertcontact", {}).get("id", "?")
-                await message.reply(f"✅ Alert contact added!\nID: `{cid}`", quote=True)
+                await message.reply(f"✅ Alert contact added!\nID: `{cid}`")
             else:
-                await message.reply("❌ Failed to add alert contact.", quote=True)
+                await message.reply("❌ Failed to add alert contact.")
 
         # ── Maintenance window steps ───────────────────────────────────────
         elif step == "mw_name":
@@ -204,41 +204,41 @@ def register(app: Client):
                 ],
                 [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
             ])
-            await message.reply("Choose **window type**:", reply_markup=markup, quote=True)
+            await message.reply("Choose **window type**:", reply_markup=markup)
 
         elif step == "mw_time":
             # Expected: HH:MM
             if ":" not in text or len(text) != 5:
-                await message.reply("⚠️ Format should be `HH:MM` (e.g. `02:00`). Try again:", quote=True)
+                await message.reply("⚠️ Format should be `HH:MM` (e.g. `02:00`). Try again:")
                 return
             data["start_time"] = text
             state["step"] = "mw_duration"
-            await message.reply("Enter **duration in minutes** (e.g. `60` for 1 hour):", quote=True)
+            await message.reply("Enter **duration in minutes** (e.g. `60` for 1 hour):")
 
         elif step == "mw_value":
             # Collect day value for Weekly (1-7) or Monthly (1-28)
             hint = data.get("mw_value_hint", "")
             if not text.isdigit():
-                await message.reply("⚠️ Please enter a number. Try again:", quote=True)
+                await message.reply("⚠️ Please enter a number. Try again:")
                 return
             val = int(text)
             if hint == "weekly" and not (1 <= val <= 7):
-                await message.reply("⚠️ Enter a number between 1 (Mon) and 7 (Sun):", quote=True)
+                await message.reply("⚠️ Enter a number between 1 (Mon) and 7 (Sun):")
                 return
             if hint == "monthly" and not (1 <= val <= 28):
-                await message.reply("⚠️ Enter a number between 1 and 28:", quote=True)
+                await message.reply("⚠️ Enter a number between 1 and 28:")
                 return
             data["mw_value"] = text
             state["step"] = "mw_time"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
             await message.reply(
                 "Enter **start time** in `HH:MM` format (UTC):\n(e.g. `02:00` for 2 AM UTC)",
-                reply_markup=markup, quote=True
+                reply_markup=markup
             )
 
         elif step == "mw_duration":
             if not text.isdigit():
-                await message.reply("⚠️ Please enter a number (minutes). Try again:", quote=True)
+                await message.reply("⚠️ Please enter a number (minutes). Try again:")
                 return
             result = await get_api().new_mwindow(
                 data["name"], data["mw_type"], data.get("mw_value", ""), data["start_time"], int(text)
@@ -246,9 +246,9 @@ def register(app: Client):
             user_state.pop(uid, None)
             if result:
                 mid = result.get("mwindow", {}).get("id", "?")
-                await message.reply(f"✅ Maintenance window created!\nID: `{mid}`", quote=True)
+                await message.reply(f"✅ Maintenance window created!\nID: `{mid}`")
             else:
-                await message.reply("❌ Failed to create maintenance window.", quote=True)
+                await message.reply("❌ Failed to create maintenance window.")
 
         # ── PSP add steps ──────────────────────────────────────────────────
         elif step == "psp_name":
@@ -263,7 +263,7 @@ def register(app: Client):
             ])
             await message.reply(
                 f"PSP name: **{text}**\n\nWhich monitors to include?",
-                reply_markup=markup, quote=True
+                reply_markup=markup
             )
 
         elif step == "psp_monitor_ids":
@@ -272,9 +272,9 @@ def register(app: Client):
             user_state.pop(uid, None)
             if result:
                 pid = result.get("psp", {}).get("id", "?")
-                await message.reply(f"✅ Status page created!\nID: `{pid}`", quote=True)
+                await message.reply(f"✅ Status page created!\nID: `{pid}`")
             else:
-                await message.reply("❌ Failed to create status page.", quote=True)
+                await message.reply("❌ Failed to create status page.")
 
 
 # ── Builder helpers ───────────────────────────────────────────────────────────
