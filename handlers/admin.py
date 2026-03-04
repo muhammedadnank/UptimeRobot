@@ -6,7 +6,7 @@ Admin-only commands:
   /ban <id> [reason]  — Ban a user
   /unban <id>         — Unban a user
   /bannedlist         — List all banned users
-  /stats              — Bot usage statistics
+  /botstats           — Bot usage statistics
   /restart            — Restart the bot process
   /setfsub <@channel|channel_id>  — Enable force-subscribe
   /delfsub            — Disable force-subscribe
@@ -226,8 +226,8 @@ def register(app: Client):
 
     # ── /stats ────────────────────────────────────────────────────────────────
 
-    @app.on_message(filters.command("stats") & filters.private & is_admin)
-    async def cmd_stats(client: Client, message: Message):
+    @app.on_message(filters.command("botstats") & filters.private & is_admin)
+    async def cmd_botstats(client: Client, message: Message):
         total  = await total_users_count()
         banned = await total_banned_count()
         active = total - banned
