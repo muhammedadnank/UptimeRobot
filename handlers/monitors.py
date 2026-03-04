@@ -400,7 +400,9 @@ async def build_alerts(api: UptimeRobotAPI) -> tuple[str, InlineKeyboardMarkup]:
         lines.append(f"🖥️ **{name}**")
         for log in logs:
             lt = log.get("type", 0)
-            dt = datetime.utcfromtimestamp(log.get("datetime", 0)).strftime("%Y-%m-%d %H:%M")
+            from datetime import timezone, timedelta
+            IST = timezone(timedelta(hours=5, minutes=30))
+            dt = datetime.fromtimestamp(log.get("datetime", 0), tz=IST).strftime("%d %b %Y, %I:%M %p")
             icon, desc = ("🔴", "Went DOWN") if lt == 1 else ("✅", "Came UP") if lt == 2 else ("ℹ️", f"Event {lt}")
             reason = log.get("reason", {}).get("detail", "")
             lines.append(f"   {icon} `{dt}` — {desc}" + (f": _{reason}_" if reason else ""))
