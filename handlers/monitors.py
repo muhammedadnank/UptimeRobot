@@ -195,11 +195,15 @@ def register(app: Client):
                 ],
                 [
                     InlineKeyboardButton("🔔 Webhook",  callback_data="ct_3"),
-                    InlineKeyboardButton("📱 SMS",      callback_data="ct_1"),
+                    InlineKeyboardButton("💼 Slack",    callback_data="ct_9"),
                 ],
                 [InlineKeyboardButton("❌ Cancel", callback_data="cancel")],
             ])
-            await message.reply("Choose **contact type**:", reply_markup=markup)
+            await message.reply(
+                "Choose **contact type**:\n"
+                "_(SMS requires a Pro plan and is not available here)_",
+                reply_markup=markup,
+            )
 
         elif step == "contact_value":
             data["value"] = text
