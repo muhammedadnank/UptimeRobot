@@ -1,7 +1,7 @@
 from pyrogram import Client
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import is_authorized, get_api
-from handlers.monitors import build_status, build_stats, build_alerts, user_state
+from handlers.monitors import build_status, build_stats, build_alerts, user_state, _set_state, _get_state
 
 
 def main_keyboard() -> InlineKeyboardMarkup:
@@ -17,7 +17,7 @@ def main_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🪟 MWindows", callback_data="mwindow"),
         ],
         [
-            InlineKeyboardButton("📄 PSP",      callback_data="psp"),
+            InlineKeyboardButton("📄 PSP",         callback_data="psp"),
             InlineKeyboardButton("➕ Add Monitor", callback_data="add_monitor"),
         ],
     ])
@@ -49,10 +49,12 @@ def register(app: Client):
             await query.message.edit_text(text, reply_markup=markup)
 
         elif data == "stats":
-            await query.message.edit_text(await build_stats(api))
+            text, markup = await build_stats(api)
+            await query.message.edit_text(text, reply_markup=markup)
 
         elif data == "alerts":
-            await query.message.edit_text(await build_alerts(api))
+            text, markup = await build_alerts(api)
+            await query.message.edit_text(text, reply_markup=markup)
 
         # ── Account ───────────────────────────────────────────────────────────
         elif data == "account":
@@ -76,7 +78,7 @@ def register(app: Client):
         # ── Contacts ──────────────────────────────────────────────────────────
         elif data in ("contacts", "add_contact"):
             if data == "add_contact":
-                user_state[uid] = {"step": "contact_name", "data": {}}
+                _set_state(uid, "contact_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
                 await query.message.edit_text(
                     "➕ **Add Alert Contact**\n\nEnter a **friendly name**:",
@@ -104,7 +106,7 @@ def register(app: Client):
         # ── Maintenance Windows ───────────────────────────────────────────────
         elif data in ("mwindow", "add_mwindow"):
             if data == "add_mwindow":
-                user_state[uid] = {"step": "mw_name", "data": {}}
+                _set_state(uid, "mw_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
                 await query.message.edit_text(
                     "🪟 **New Maintenance Window**\n\nEnter a **name**:",
@@ -132,7 +134,7 @@ def register(app: Client):
         # ── PSP ───────────────────────────────────────────────────────────────
         elif data in ("psp", "add_psp"):
             if data == "add_psp":
-                user_state[uid] = {"step": "psp_name", "data": {}}
+                _set_state(uid, "psp_name")
                 markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
                 await query.message.edit_text(
                     "📄 **New Status Page**\n\nEnter a **name**:",
@@ -156,7 +158,7 @@ def register(app: Client):
 
         # ── Add monitor ───────────────────────────────────────────────────────
         elif data == "add_monitor":
-            user_state[uid] = {"step": "add_name", "data": {}}
+            _set_state(uid, "add_name")
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
             await query.message.edit_text(
                 "➕ **Add New Monitor**\n\nStep 1/3 — Enter a **friendly name**:",
@@ -166,7 +168,7 @@ def register(app: Client):
         # ── Add monitor: type selection ───────────────────────────────────────
         elif data.startswith("add_type_"):
             mtype = int(data.split("_")[-1])
-            state = user_state.get(uid)
+            state = _get_state(uid)
             if not state or state.get("step") != "add_type":
                 await query.message.edit_text("⚠️ Session expired. Use /add again.")
                 return
@@ -190,7 +192,7 @@ def register(app: Client):
         # ── Contact type selection ────────────────────────────────────────────
         elif data.startswith("ct_"):
             ctype = int(data.split("_")[-1])
-            state = user_state.get(uid)
+            state = _get_state(uid)
             if not state or state.get("step") != "contact_type":
                 await query.message.edit_text("⚠️ Session expired. Try again.")
                 return
@@ -204,23 +206,43 @@ def register(app: Client):
                 reply_markup=markup
             )
 
+        # ── Maintenance window type selection ─────────────────────────────────
         elif data.startswith("mw_type_"):
             mtype = int(data.split("_")[-1])
-            state = user_state.get(uid)
+            state = _get_state(uid)
             if not state or state.get("step") != "mw_type":
                 await query.message.edit_text("⚠️ Session expired. Try again.")
                 return
             state["data"]["mw_type"] = mtype
-            state["step"] = "mw_time"
             markup = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
-            await query.message.edit_text(
-                "Enter **start time** in `HH:MM` format (UTC):\n(e.g. `02:00` for 2 AM UTC)",
-                reply_markup=markup
-            )
+
+            # Weekly needs day-of-week, Monthly needs day-of-month
+            if mtype == 3:
+                state["step"] = "mw_value"
+                state["data"]["mw_value_hint"] = "weekly"
+                await query.message.edit_text(
+                    "Enter **day of week** (1 = Monday … 7 = Sunday):",
+                    reply_markup=markup
+                )
+            elif mtype == 4:
+                state["step"] = "mw_value"
+                state["data"]["mw_value_hint"] = "monthly"
+                await query.message.edit_text(
+                    "Enter **day of month** (1 – 28):",
+                    reply_markup=markup
+                )
+            else:
+                # Once or Daily — no value needed
+                state["step"] = "mw_time"
+                state["data"]["mw_value"] = ""
+                await query.message.edit_text(
+                    "Enter **start time** in `HH:MM` format (UTC):\n(e.g. `02:00` for 2 AM UTC)",
+                    reply_markup=markup
+                )
 
         # ── PSP: monitor selection ────────────────────────────────────────────
         elif data == "psp_monitors_all":
-            state = user_state.get(uid)
+            state = _get_state(uid)
             if not state or "name" not in state.get("data", {}):
                 await query.message.edit_text("⚠️ Session expired. Try again.")
                 return
@@ -234,7 +256,7 @@ def register(app: Client):
                 await query.message.edit_text("❌ Failed to create status page.")
 
         elif data == "psp_monitors_custom":
-            state = user_state.get(uid)
+            state = _get_state(uid)
             if not state or "name" not in state.get("data", {}):
                 await query.message.edit_text("⚠️ Session expired. Try again.")
                 return
