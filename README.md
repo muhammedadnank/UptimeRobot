@@ -11,6 +11,7 @@
 [![Deploy on Render](https://img.shields.io/badge/Deploy-Render-46e3b7?logo=render&logoColor=white)](https://render.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue)](https://github.com/muhammedadnank/UptimeRobot/tree/V1.0.0)
 
 </div>
 
@@ -21,15 +22,17 @@
 | Category | Capabilities |
 |---|---|
 | 🔑 **Auth** | Each user links their own UptimeRobot API key — securely stored per-user in MongoDB |
-| 🖥️ **Monitors** | View Up/Down/Paused status, uptime % (7d / 30d / 90d), response times, add / pause / resume / delete |
-| 👤 **Account** | Email, monitor limit, check interval, counts by status |
+| 📊 **Status Dashboard** | Paginated monitor cards (5/page) with live ⏸️ Pause / ▶️ Resume / 🗑 Delete buttons per monitor |
+| 📈 **Stats** | Visual progress bar uptime display (`▓▓▓▓▓▓░░░░`) with 🟢🟡🔴 color grading for 7d / 30d / 90d |
+| 🔔 **Alerts** | Unified timeline feed (newest first), filter by 📋 All or 🔴 Down only |
+| 👤 **Account** | Monitor usage progress bar, plan badge (Free/Pro), email, check interval |
 | 🔔 **Alert Contacts** | List, add (Email / Telegram / Webhook / Slack), delete |
 | 🪟 **Maintenance Windows** | List, create (Once / Daily / Weekly / Monthly), delete |
 | 📄 **Public Status Pages** | List, create, delete |
 | 🔍 **Inline Search** | Type `@bot <query>` in any chat to instantly share monitor status |
-| 🔒 **Security** | Per-user API key isolation, confirmation prompt on all destructive actions, ban system |
+| 🔒 **Security** | Per-user API key isolation, confirmation prompt on all destructive actions |
 | 🌐 **Multi-user** | Unlimited users, each with their own UptimeRobot account |
-| 👮 **Admin Panel** | Broadcast, ban/unban, detailed bot stats, force-subscribe, restart |
+| 👮 **Admin Panel** | Broadcast, ban/unban, live bot stats (memory + uptime), force-subscribe, restart |
 
 ---
 
@@ -45,9 +48,9 @@
 ### 🖥️ Monitors
 | Command | Description |
 |---|---|
-| `/status` | Live status of all monitors |
-| `/stats` | Uptime % and average response times |
-| `/alerts` | Last 3 alert events per monitor |
+| `/status` | Paginated monitor cards with quick Pause / Resume / Delete buttons |
+| `/stats` | Visual uptime % bars and average response times |
+| `/alerts` | Unified alert timeline — filter by All or Down only |
 | `/add` | Guided 3-step monitor creation |
 | `/pause <id>` | Pause a monitor |
 | `/resume <id>` | Resume a paused monitor |
@@ -56,7 +59,7 @@
 ### 👤 Account & Contacts
 | Command | Description |
 |---|---|
-| `/account` | View account details |
+| `/account` | Account details with monitor usage progress bar |
 | `/contacts` | List all alert contacts |
 | `/addcontact` | Add a new contact (guided) |
 | `/delcontact <id>` | Delete a contact |
@@ -74,14 +77,14 @@
 ### 🔧 General
 | Command | Description |
 |---|---|
-| `/start` | Help message and full command list |
-| `/menu` | Interactive inline button panel |
+| `/start` | Welcome screen with live monitor summary (returning users) |
+| `/menu` | Interactive control panel with live account summary |
 | `/cancel` | Cancel any in-progress multi-step operation |
 
 ### 👮 Admin Only
 | Command | Description |
 |---|---|
-| `/botstats` | Users count, memory, uptime, force-sub status |
+| `/botstats` | Users count, memory usage, uptime, force-sub status |
 | `/broadcast` | Reply to any message with this to send it to all users |
 | `/ban <id> [reason]` | Ban a user from using the bot |
 | `/unban <id>` | Unban a user |
@@ -90,7 +93,7 @@
 | `/delfsub` | Disable force-subscribe |
 | `/restart` | Restart the bot process |
 
-> 💡 Use `/status` to find monitor IDs needed for pause / resume / delete.  
+> 💡 Use `/status` to find monitor IDs needed for pause / resume / delete.
 > 👮 Admin commands only work for user IDs listed in the `ADMINS` env variable.
 
 ---
@@ -101,13 +104,13 @@ Type `@yourbotusername` in **any Telegram chat** to search your monitors without
 
 | Query | Result |
 |---|---|
-| `@bot` | Overview + all monitors |
+| `@bot` | Overview summary + all monitors |
 | `@bot mysite` | Search by name or URL |
 | `@bot down` | Only down monitors |
 | `@bot up` | Only up monitors |
 | `@bot paused` | Only paused monitors |
 
-Each result shows monitor name, status, URL, uptime %, response time, and ID.  
+Each result shows monitor name, status, URL, uptime %, response time, and ID.
 Tap a result to share it directly into the chat.
 
 > ⚠️ **Enable inline mode first:** BotFather → your bot → **Bot Settings → Inline Mode → Enable**
@@ -119,27 +122,29 @@ Tap a result to share it directly into the chat.
 ```
 UptimeRobot-main/
 │
-├── bot.py                  # Entry point — Client setup, core handlers (/start /setkey /menu)
-├── db.py                   # MongoDB — users, ban/unban, force-sub config
-├── utils.py                # Per-user API instance cache (get_api_for)
-├── uptime_robot.py         # UptimeRobot API wrapper (aiohttp, session reuse)
+├── bot.py                  # Entry point — Client setup, /start /setkey /menu /mykey /deletekey
+├── db.py                   # MongoDB — users CRUD, ban/unban, force-sub config, indexes
+├── utils.py                # get_api_for() — per-user API instance cache
+├── uptime_robot.py         # UptimeRobot REST API wrapper (aiohttp, session reuse)
 │
 ├── handlers/
 │   ├── __init__.py
-│   ├── middleware.py       # check_banned, check_force_sub, check_all
-│   ├── monitors.py         # /status /stats /alerts /add /pause /resume /delete
-│   ├── account.py          # /account
+│   ├── middleware.py       # check_banned · check_force_sub · check_all
+│   ├── monitors.py         # /status /stats /alerts /add /pause /resume /delete + UI builders
+│   ├── account.py          # /account with usage progress bar
 │   ├── contacts.py         # /contacts /addcontact /delcontact
 │   ├── mwindow.py          # /mwindow /addmwindow /delmwindow
 │   ├── psp.py              # /psp /addpsp /delpsp
 │   ├── callbacks.py        # All inline keyboard callbacks + main_keyboard()
-│   ├── admin.py            # /broadcast /ban /unban /bannedlist /botstats /restart /setfsub /delfsub
+│   ├── admin.py            # /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart
 │   └── inline.py           # Inline mode — @bot <query> monitor search
 │
 ├── .env.example            # Environment variable template
 ├── requirements.txt        # Python dependencies
 ├── Procfile                # worker: python bot.py
-└── railway.toml            # Railway deployment config
+├── railway.toml            # Railway deploy config
+├── README.md               # This file
+└── LICENSE                 # MIT License
 ```
 
 ---
@@ -196,15 +201,7 @@ python bot.py
 
 ## ☁️ Deployment
 
-### Railway
-
-1. Push your code to GitHub
-2. [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo**
-3. Select your repo
-4. **Variables** tab → add all env vars
-5. Done — Railway auto-deploys on every push ✅
-
-### Render
+### Render (Recommended)
 
 1. [render.com](https://render.com) → **New → Background Worker**
 2. Connect your GitHub repo
@@ -213,6 +210,14 @@ python bot.py
    - **Start Command:** `python bot.py`
 4. Add all environment variables (set `PORT=10000`)
 5. **Create Background Worker** → Deploy ✅
+
+### Railway
+
+1. Push your code to GitHub
+2. [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo**
+3. Select your repo
+4. **Variables** tab → add all env vars
+5. Done — Railway auto-deploys on every push ✅
 
 ---
 
@@ -286,21 +291,22 @@ PORT=10000
 | `/setkey` says invalid key | Key must start with `ur_` or match `u1234567-xxxx…` format |
 | Multi-step flow stuck | Send `/cancel` to reset state |
 | Admin commands not working | Add your Telegram user ID to `ADMINS` env variable |
-| Force-sub not working | Make sure the bot is an **admin** in the channel. Use `@username` or channel ID — not a phone number |
-| Inline mode not working | Enable in BotFather → Bot Settings → Inline Mode |
-| Render deploy times out | Make sure `PORT` env var is set — the health server must bind a port |
+| Force-sub not working | Bot must be **admin** in the channel. Use `@username` or channel ID — not a phone number |
+| Inline mode not working | BotFather → Bot Settings → **Inline Mode → Enable** |
+| Render deploy times out | Ensure `PORT` env var is set — health server must bind a port |
 
 ---
 
 ## 📝 Notes
 
 - **Private chats only** — group chats are not supported
-- Multi-step flows (`/add`, `/addcontact`, `/addmwindow`, `/addpsp`) auto-expire after **10 minutes** of inactivity
-- UptimeRobot Free plan: **50 monitors**, **10 API requests/minute**
-- Alert timestamps are displayed in **IST (UTC+5:30)**
+- Multi-step flows auto-expire after **10 minutes** of inactivity — send `/cancel` to reset manually
+- UptimeRobot Free plan: **50 monitors**, **5-minute check interval**
+- Alert timestamps displayed in **IST (UTC+5:30)**
 - Weekly maintenance windows: day-of-week (1 = Mon … 7 = Sun)
 - Monthly maintenance windows: day-of-month (1 – 28)
-- API keys are stored as plaintext — enable Atlas **Encryption at Rest** for extra security in production
+- Status page displays **5 monitors per page** — use ◀️ / ▶️ to navigate
+- API keys stored as plaintext — enable Atlas **Encryption at Rest** for production security
 
 ---
 
@@ -319,3 +325,11 @@ Please keep PRs focused — one feature or fix per PR.
 ## 📄 License
 
 MIT License — free to use, modify, and distribute. See [`LICENSE`](LICENSE) for details.
+
+---
+
+<div align="center">
+
+Made with ❤️ by [muhammedadnank](https://github.com/muhammedadnank)
+
+</div>
