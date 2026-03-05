@@ -8,22 +8,33 @@ BASE = "https://api.uptimerobot.com/v2"
 class UptimeRobotAPI:
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self._session: aiohttp.ClientSession | None = None
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession()
+        return self._session
+
+    async def close(self) -> None:
+        """Close the underlying HTTP session. Call when done with this instance."""
+        if self._session and not self._session.closed:
+            await self._session.close()
 
     async def _post(self, endpoint: str, payload: dict) -> dict | None:
         form_data = {**payload, "api_key": self.api_key, "format": "json"}
         try:
-            async with aiohttp.ClientSession() as s:
-                async with s.post(
-                    f"{BASE}/{endpoint}",
-                    data=form_data,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as r:
-                    r.raise_for_status()
-                    data = await r.json(content_type=None)
-                    if data.get("stat") == "ok":
-                        return data
-                    logger.error("API error: %s", data)
-                    return None
+            session = await self._get_session()
+            async with session.post(
+                f"{BASE}/{endpoint}",
+                data=form_data,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as r:
+                r.raise_for_status()
+                data = await r.json(content_type=None)
+                if data.get("stat") == "ok":
+                    return data
+                logger.error("API error: %s", data)
+                return None
         except Exception as e:
             logger.error("Request failed: %s", e)
             return None
