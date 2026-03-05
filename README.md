@@ -23,13 +23,12 @@
 | 🔑 **Auth** | Each user links their own UptimeRobot API key — securely stored per-user in MongoDB |
 | 🖥️ **Monitors** | View Up/Down/Paused status, uptime % (7d / 30d / 90d), response times, add / pause / resume / delete |
 | 👤 **Account** | Email, monitor limit, check interval, counts by status |
-| 🔔 **Alert Contacts** | List, add (Email / Telegram / Webhook / SMS / Slack), delete |
+| 🔔 **Alert Contacts** | List, add (Email / Telegram / Webhook / Slack), delete |
 | 🪟 **Maintenance Windows** | List, create (Once / Daily / Weekly / Monthly), delete |
 | 📄 **Public Status Pages** | List, create, delete |
-| 🔒 **Security** | Per-user API key isolation, confirmation prompt on all destructive actions |
+| 🔒 **Security** | Per-user API key isolation, confirmation prompt on all destructive actions, ban system |
 | 🌐 **Multi-user** | Unlimited users, each with their own UptimeRobot account |
-
----
+| 👮 **Admin Panel** | Broadcast, ban/unban, bot stats, force-subscribe, restart |
 
 ---
 
@@ -38,7 +37,7 @@
 ### 🔑 Key Management
 | Command | Description |
 |---|---|
-| `/setkey <api_key>` | Link your UptimeRobot API key (starts with `ur_`) |
+| `/setkey <api_key>` | Link your UptimeRobot API key |
 | `/mykey` | Check whether an API key is currently set |
 | `/deletekey` | Remove your stored API key |
 
@@ -78,7 +77,20 @@
 | `/menu` | Interactive inline button panel |
 | `/cancel` | Cancel any in-progress multi-step operation |
 
-> 💡 Use `/status` to find monitor IDs needed for pause / resume / delete.
+### 👮 Admin Only
+| Command | Description |
+|---|---|
+| `/botstats` | Total users, active, banned, force-sub status |
+| `/broadcast` | Reply to any message with this to send it to all users |
+| `/ban <id> [reason]` | Ban a user from using the bot |
+| `/unban <id>` | Unban a user |
+| `/bannedlist` | List all banned users |
+| `/setfsub <@channel>` | Enable force-subscribe for a channel |
+| `/delfsub` | Disable force-subscribe |
+| `/restart` | Restart the bot process |
+
+> 💡 Use `/status` to find monitor IDs needed for pause / resume / delete.  
+> 👮 Admin commands only work for user IDs listed in the `ADMINS` env variable.
 
 ---
 
@@ -87,8 +99,8 @@
 ```
 uptimebot/
 ├── bot.py                  # Entry point — core commands, app lifecycle
-├── db.py                   # MongoDB layer — async user CRUD via motor
-├── uptime_robot.py         # Async UptimeRobot API wrapper (aiohttp)
+├── db.py                   # MongoDB layer — async user/ban/config CRUD via motor
+├── uptime_robot.py         # Async UptimeRobot API wrapper (aiohttp, session reuse)
 ├── utils.py                # Per-user API instance factory
 ├── requirements.txt        # Python dependencies
 ├── Procfile                # Process config for Railway / Render
@@ -101,7 +113,9 @@ uptimebot/
     ├── contacts.py         # Alert contact commands
     ├── mwindow.py          # Maintenance window commands
     ├── psp.py              # Public status page commands
-    └── callbacks.py        # Inline keyboard button handlers
+    ├── callbacks.py        # Inline keyboard button handlers
+    ├── admin.py            # Admin-only commands (broadcast, ban, fsub, stats)
+    └── middleware.py       # Ban check + force-subscribe check (runs on every message)
 ```
 
 ---
@@ -116,6 +130,7 @@ uptimebot/
 | `API_HASH` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `BOT_TOKEN` | [@BotFather](https://t.me/BotFather) on Telegram → `/newbot` |
 | `MONGODB_URI` | [cloud.mongodb.com](https://cloud.mongodb.com) → Free Cluster → Connect → Drivers |
+| `ADMINS` | Your Telegram user ID — get it from [@userinfobot](https://t.me/userinfobot) |
 
 > Each user's UptimeRobot API key is stored in MongoDB — it is **not** an env variable.
 
@@ -139,14 +154,14 @@ uptimebot/
 ```bash
 # Clone
 git clone https://github.com/muhammedadnank/UptimeRobot.git
-cd uptimebot
+cd UptimeRobot
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Fill in API_ID, API_HASH, BOT_TOKEN, MONGODB_URI
+# Fill in API_ID, API_HASH, BOT_TOKEN, MONGODB_URI, ADMINS
 
 # Start
 python bot.py
@@ -166,7 +181,7 @@ git push -u origin main
 
 1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
 2. Select your repo
-3. **Variables** tab → add all four env vars
+3. **Variables** tab → add all env vars (see below)
 4. Done — Railway auto-deploys on every push ✅
 
 ---
@@ -178,7 +193,7 @@ git push -u origin main
 3. Set:
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `python bot.py`
-4. Add the four environment variables
+4. Add all environment variables
 5. **Create Background Worker** → Deploy ✅
 
 ---
@@ -193,8 +208,12 @@ API_HASH=your_api_hash_here
 # Bot token — @BotFather
 BOT_TOKEN=your_bot_token_here
 
-# MongoDB Atlas connection string
+# MongoDB Atlas connection string — cloud.mongodb.com
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+
+# Admin user IDs — comma or space separated
+# Get your ID from @userinfobot on Telegram
+ADMINS=123456789
 ```
 
 ---
@@ -205,8 +224,8 @@ MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWri
 |---|---|
 | [`kurigram`](https://github.com/KurimuzonAkuma/pyrogram) | Telegram MTProto — actively maintained Pyrogram fork |
 | [`motor`](https://motor.readthedocs.io) | Async MongoDB driver |
-| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for UptimeRobot API |
-| [`tgcrypto`](https://github.com/pyrogram/tgcrypto) | Fast Telegram encryption (optional, speeds up MTProto) |
+| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for UptimeRobot API (session reuse) |
+| [`tgcrypto`](https://github.com/pyrogram/tgcrypto) | Fast Telegram encryption (speeds up MTProto) |
 
 ---
 
@@ -218,9 +237,19 @@ MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWri
 |---|---|---|
 | `telegram_id` | `int` | Unique index — Telegram user ID |
 | `api_key` | `str` | UptimeRobot API key (`ur_…`) |
+| `banned` | `bool` | Whether the user is banned |
+| `ban_reason` | `str` | Reason for ban |
+| `banned_at` | `datetime` | When the user was banned |
 | `created_at` | `datetime` | When the user first ran `/setkey` |
 | `updated_at` | `datetime` | Last API key update |
 | `last_active` | `datetime` | Last API call made |
+
+**Collection: `config`**
+
+| Field | Type | Description |
+|---|---|---|
+| `key` | `str` | Unique index — config key (e.g. `force_sub`) |
+| `value` | `str` | Config value (e.g. `@yourchannel`) |
 
 ---
 
@@ -230,21 +259,21 @@ MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWri
 
 This error appears on **Python 3.14** when Pyrogram's `Client` is created at module level before `asyncio.run()` starts the event loop.
 
-**Fix (already applied in this repo):** The `Client` is instantiated inside `_run()`, after `asyncio.run()` has created the event loop, so all internal futures and tasks share the same loop.
-
-If you see this on a fork that hasn't applied the fix, move your `Client(...)` call to inside your async entry-point — not at the top level of the module.
+**Fix (already applied in this repo):** The `Client` is instantiated inside `_run()`, after `asyncio.run()` has created the event loop.
 
 ---
 
-### Common issues
+### Common Issues
 
 | Symptom | Fix |
 |---|---|
-| Bot doesn't respond | Check `BOT_TOKEN` is correct and the bot is not blocked |
-| `MONGODB_URI` connection error | Whitelist your server IP in Atlas Network Access |
+| Bot doesn't respond | Check `BOT_TOKEN` is correct and bot is not blocked |
+| MongoDB connection error | Whitelist your server IP in Atlas → Network Access |
 | `API_ID` / `API_HASH` errors | These come from [my.telegram.org](https://my.telegram.org), not BotFather |
-| `/setkey` says invalid key | UptimeRobot API keys must start with `ur_` |
+| `/setkey` says invalid key | Key must start with `ur_` or match `u1234567-xxxx…` format |
 | Multi-step flow stuck | Send `/cancel` to reset state |
+| Admin commands not working | Add your Telegram user ID to `ADMINS` env variable |
+| Force-sub not working | Make sure the bot is an **admin** in the channel |
 
 ---
 
@@ -255,6 +284,7 @@ If you see this on a fork that hasn't applied the fix, move your `Client(...)` c
 - UptimeRobot Free plan: **10 API requests/minute**
 - Weekly maintenance windows: day-of-week (1 = Mon … 7 = Sun)
 - Monthly maintenance windows: day-of-month (1 – 28)
+- Alert timestamps are displayed in **IST (UTC+5:30)**
 - API keys are stored as plaintext — enable Atlas **Encryption at Rest** for extra security in production
 
 ---
