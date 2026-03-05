@@ -1,11 +1,11 @@
-"""Compatibility wrapper around root-level db module."""
+"""MongoDB data layer for user and bot configuration state."""
 
-import os
 import logging
+import os
 from datetime import datetime, timezone
+
 from motor.motor_asyncio import AsyncIOMotorClient
- 
-from db import *  # noqa: F401,F403
+
 logger = logging.getLogger(__name__)
 
 MONGODB_URI = os.environ.get("MONGODB_URI", "")
@@ -14,6 +14,7 @@ _client: AsyncIOMotorClient | None = None
 
 
 def get_db():
+     """Return the shared MongoDB database handle."""
     global _client
     if _client is None:
         _client = AsyncIOMotorClient(MONGODB_URI)
@@ -32,16 +33,17 @@ async def get_user(telegram_id: int) -> dict | None:
 
 async def upsert_user(telegram_id: int, api_key: str) -> bool:
     try:
+        now = datetime.now(timezone.utc)
         await get_db().users.update_one(
             {"telegram_id": telegram_id},
             {
                 "$set": {
                     "telegram_id": telegram_id,
                     "api_key": api_key,
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": now,
                 },
                 "$setOnInsert": {
-                    "created_at": datetime.now(timezone.utc),
+                    "created_at": now,
                     "banned": False,
                     "ban_reason": "",
                 },
@@ -114,14 +116,12 @@ async def ban_user(telegram_id: int, reason: str = "No reason provided") -> bool
 
 
 async def unban_user(telegram_id: int) -> bool:
-    """Unban a user. Returns True if user exists (even if already unbanned).
-    Returns False only if user not found or DB error."""
+    """Unban a user. Returns True if user exists (even if already unbanned)."""
     try:
         result = await get_db().users.update_one(
             {"telegram_id": telegram_id},
             {"$set": {"banned": False, "ban_reason": ""}},
         )
-        # matched_count=1 means user exists (even if already unbanned)
         return result.matched_count == 1
     except Exception as e:
         logger.error("unban_user error: %s", e)
@@ -165,10 +165,7 @@ async def get_force_sub() -> str | None:
         doc = await get_db().config.find_one({"key": "force_sub"})
         return doc.get("value") if doc else None
     except Exception as e:
-        logger.error("get_force_sub error: %s", e)"""Compatibility wrapper around root-level db module."""
-
-from db import *  # noqa: F401,F403
-
+        logger.error("get_force_sub error: %s", e)
         return None
 
 
@@ -192,7 +189,7 @@ async def set_force_sub(channel: str | None) -> bool:
 # ── DB Init (indexes) ─────────────────────────────────────────────────────────
 
 async def init_db() -> None:
-    """Create indexes on startup. Call once from bot.py main()."""
+    """Create indexes on startup. Call once from app startup."""
     try:
         db = get_db()
         await db.users.create_index("telegram_id", unique=True)
