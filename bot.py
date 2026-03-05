@@ -129,7 +129,7 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("mykey") & filters.private)
     async def cmd_mykey(c: Client, message: Message):
-        if await check_banned(c, message):
+        if await check_all(c, message):
             return
         user = await get_user(message.from_user.id)
         if not user or not user.get("api_key"):
@@ -145,7 +145,7 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("deletekey") & filters.private)
     async def cmd_deletekey(c: Client, message: Message):
-        if await check_banned(c, message):
+        if await check_all(c, message):
             return
         from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         markup = InlineKeyboardMarkup([[
@@ -199,14 +199,15 @@ def main():
 
         # Register handlers
         _register_core_handlers(app)
-        from handlers import monitors, account, contacts, mwindow, psp, callbacks, admin
+        from handlers import monitors, account, contacts, mwindow, psp, callbacks, admin, inline
         monitors.register(app)
         account.register(app)
         contacts.register(app)
         mwindow.register(app)
         psp.register(app)
         callbacks.register(app)
-        admin.register(app)         # ← new
+        admin.register(app)
+        inline.register(app)        # ← inline search
 
         await init_db()
         await app.start()
