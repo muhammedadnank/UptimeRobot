@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import get_api_for
+from handlers.middleware import check_banned, check_force_sub
 from handlers.monitors import _set_state
 
 MW_TYPE   = {1:"Once", 2:"Daily", 3:"Weekly", 4:"Monthly"}
@@ -12,6 +13,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("mwindow") & filters.private)
     async def cmd_mwindow(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -37,6 +42,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("addmwindow") & filters.private)
     async def cmd_addmwindow(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -50,6 +59,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("delmwindow") & filters.private)
     async def cmd_delmwindow(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
