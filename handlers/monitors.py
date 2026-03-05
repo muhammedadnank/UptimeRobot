@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from uptime_robot import UptimeRobotAPI
 from utils import get_api_for
+from handlers.middleware import check_banned, check_force_sub
 
 STATE_TTL = 600  # 10 minutes
 
@@ -24,6 +25,8 @@ def _get_state(uid: int) -> dict | None:
 
 
 NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
+IST = timezone(timedelta(hours=5, minutes=30))  # Alert timestamps displayed in IST
+
 
 STATUS_EMOJI = {0: "⏸️", 1: "🔍", 2: "✅", 8: "🟡", 9: "🔴"}
 STATUS_TEXT  = {0: "Paused", 1: "Not Checked", 2: "Up", 8: "Seems Down", 9: "Down"}
@@ -35,6 +38,10 @@ def register(app: Client):
     # ── /status ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("status") & filters.private)
     async def cmd_status(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -46,6 +53,10 @@ def register(app: Client):
     # ── /stats ────────────────────────────────────────────────────────────────
     @app.on_message(filters.command("stats") & filters.private)
     async def cmd_stats(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -57,6 +68,10 @@ def register(app: Client):
     # ── /alerts ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("alerts") & filters.private)
     async def cmd_alerts(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -68,6 +83,10 @@ def register(app: Client):
     # ── /pause <id> ───────────────────────────────────────────────────────────
     @app.on_message(filters.command("pause") & filters.private)
     async def cmd_pause(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -84,6 +103,10 @@ def register(app: Client):
     # ── /resume <id> ──────────────────────────────────────────────────────────
     @app.on_message(filters.command("resume") & filters.private)
     async def cmd_resume(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -100,6 +123,10 @@ def register(app: Client):
     # ── /delete <id> ──────────────────────────────────────────────────────────
     @app.on_message(filters.command("delete") & filters.private)
     async def cmd_delete(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -121,12 +148,20 @@ def register(app: Client):
     # ── /cancel ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("cancel") & filters.private)
     async def cmd_cancel(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         user_state.pop(message.from_user.id, None)
         await message.reply("❌ Operation cancelled.")
 
     # ── /add — multi-step ─────────────────────────────────────────────────────
     @app.on_message(filters.command("add") & filters.private)
     async def cmd_add(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -147,6 +182,10 @@ def register(app: Client):
         "broadcast","ban","unban","bannedlist","botstats","restart","setfsub","delfsub"
     ]))
     async def handle_text(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         uid   = message.from_user.id
         text  = message.text.strip()
         state = _get_state(uid)
@@ -401,8 +440,6 @@ async def build_alerts(api: UptimeRobotAPI) -> tuple[str, InlineKeyboardMarkup]:
         lines.append(f"🖥️ **{name}**")
         for log in logs:
             lt = log.get("type", 0)
-            from datetime import timezone, timedelta
-            IST = timezone(timedelta(hours=5, minutes=30))
             dt = datetime.fromtimestamp(log.get("datetime", 0), tz=IST).strftime("%d %b %Y, %I:%M %p")
             icon, desc = ("🔴", "Went DOWN") if lt == 1 else ("✅", "Came UP") if lt == 2 else ("ℹ️", f"Event {lt}")
             reason = log.get("reason", {}).get("detail", "")
