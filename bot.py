@@ -74,8 +74,12 @@ def _register_core_handlers(client: Client):
             "👮 **Admin Commands:**\n"
             "• /botstats — Bot usage statistics\n"
             "• /broadcast — Broadcast a message\n"
-            "• /ban `/unban` — Manage users\n"
-            "• /setfsub `/delfsub` — Force subscribe",
+            "• /ban `<id>` — Ban a user\n"
+            "• /unban `<id>` — Unban a user\n"
+            "• /bannedlist — List banned users\n"
+            "• /setfsub `<channel>` — Enable force subscribe\n"
+            "• /delfsub — Disable force subscribe\n"
+            "• /restart — Restart the bot",
             reply_markup=main_keyboard() if has_key else None,
         )
 
@@ -197,6 +201,10 @@ def _start_health_server():
 
 
 def main():
+    # Start health server IMMEDIATELY — before any validation or DB calls
+    # so Render's port scanner sees the open port right away.
+    _start_health_server()
+
     for var, val in [
         ("API_ID", API_ID), ("API_HASH", API_HASH),
         ("BOT_TOKEN", BOT_TOKEN),
@@ -206,8 +214,6 @@ def main():
 
     if not os.environ.get("MONGODB_URI"):
         raise ValueError("❌ Environment variable 'MONGODB_URI' is not set!")
-
-    _start_health_server()
 
     async def _run():
         global app
