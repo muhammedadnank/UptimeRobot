@@ -4,7 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from uptime_robot import UptimeRobotAPI
 from utils import get_api_for
-from handlers.middleware import check_banned, check_force_sub
+from handlers.middleware import check_all
 
 STATE_TTL = 600  # 10 minutes
 
@@ -38,9 +38,7 @@ def register(app: Client):
     # ── /status ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("status") & filters.private)
     async def cmd_status(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -53,9 +51,7 @@ def register(app: Client):
     # ── /stats ────────────────────────────────────────────────────────────────
     @app.on_message(filters.command("stats") & filters.private)
     async def cmd_stats(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -68,9 +64,7 @@ def register(app: Client):
     # ── /alerts ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("alerts") & filters.private)
     async def cmd_alerts(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -83,9 +77,7 @@ def register(app: Client):
     # ── /pause <id> ───────────────────────────────────────────────────────────
     @app.on_message(filters.command("pause") & filters.private)
     async def cmd_pause(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -103,9 +95,7 @@ def register(app: Client):
     # ── /resume <id> ──────────────────────────────────────────────────────────
     @app.on_message(filters.command("resume") & filters.private)
     async def cmd_resume(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -123,9 +113,7 @@ def register(app: Client):
     # ── /delete <id> ──────────────────────────────────────────────────────────
     @app.on_message(filters.command("delete") & filters.private)
     async def cmd_delete(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -148,9 +136,7 @@ def register(app: Client):
     # ── /cancel ───────────────────────────────────────────────────────────────
     @app.on_message(filters.command("cancel") & filters.private)
     async def cmd_cancel(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         user_state.pop(message.from_user.id, None)
         await message.reply("❌ Operation cancelled.")
@@ -158,9 +144,7 @@ def register(app: Client):
     # ── /add — multi-step ─────────────────────────────────────────────────────
     @app.on_message(filters.command("add") & filters.private)
     async def cmd_add(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -182,9 +166,7 @@ def register(app: Client):
         "broadcast","ban","unban","bannedlist","botstats","restart","setfsub","delfsub"
     ]))
     async def handle_text(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         uid   = message.from_user.id
         text  = message.text.strip()
@@ -298,8 +280,16 @@ def register(app: Client):
             )
 
         elif step == "mw_time":
-            if ":" not in text or len(text) != 5:
-                await message.reply("⚠️ Format should be `HH:MM` (e.g. `02:00`). Try again:")
+            valid_time = False
+            if ":" in text and len(text) == 5:
+                try:
+                    hh, mm = text.split(":")
+                    if hh.isdigit() and mm.isdigit() and 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59:
+                        valid_time = True
+                except ValueError:
+                    pass
+            if not valid_time:
+                await message.reply("⚠️ Format should be `HH:MM` (e.g. `02:00`, hours 00-23, minutes 00-59). Try again:")
                 return
             data["start_time"] = text
             state["step"] = "mw_duration"
