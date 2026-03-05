@@ -2,10 +2,11 @@ import os
 import sys
 import logging
 import asyncio
+import re
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from db import init_db, get_user, upsert_user, delete_user
-from handlers.middleware import check_banned, check_force_sub
+from handlers.middleware import check_all
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -36,9 +37,7 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("start") & filters.private)
     async def cmd_start(c: Client, message: Message):
-        if await check_banned(c, message):
-            return
-        if await check_force_sub(c, message):
+        if await check_all(c, message):
             return
         from handlers.callbacks import main_keyboard
         user = await get_user(message.from_user.id)
@@ -80,9 +79,7 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("menu") & filters.private)
     async def cmd_menu(c: Client, message: Message):
-        if await check_banned(c, message):
-            return
-        if await check_force_sub(c, message):
+        if await check_all(c, message):
             return
         from handlers.callbacks import main_keyboard
         user = await get_user(message.from_user.id)
@@ -96,9 +93,7 @@ def _register_core_handlers(client: Client):
 
     @client.on_message(filters.command("setkey") & filters.private)
     async def cmd_setkey(c: Client, message: Message):
-        if await check_banned(c, message):
-            return
-        if await check_force_sub(c, message):
+        if await check_all(c, message):
             return
         args = message.command[1:]
         if not args:
@@ -112,7 +107,6 @@ def _register_core_handlers(client: Client):
             )
             return
         api_key = args[0].strip()
-        import re
         if not re.match(r"^(ur_[a-f0-9]+|u[0-9]+-[a-f0-9]+)$", api_key):
             await message.reply(
                 "⚠️ Invalid key format.\n\n"
