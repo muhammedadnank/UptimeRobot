@@ -46,6 +46,12 @@ async def check_force_sub(client: Client, message: Message) -> bool:
     if not channel:
         return False  # feature disabled
 
+    # Reject phone numbers — bots cannot resolve them (BOT_METHOD_INVALID)
+    ch_str = str(channel).strip()
+    if ch_str.startswith("+") or (ch_str.lstrip("+").isdigit() and not ch_str.startswith("-") and len(ch_str) > 7):
+        logger.warning("force_sub value looks like a phone number (%s) — skipping check. Use @username or channel ID.", ch_str)
+        return False
+
     user_id = message.from_user.id if message.from_user else None
     if not user_id:
         return False
@@ -109,6 +115,12 @@ async def check_all(client: Client, message: Message) -> bool:
         return True
 
     if not channel:
+        return False
+
+    # Reject phone numbers — bots cannot resolve them (BOT_METHOD_INVALID)
+    ch_str = str(channel).strip()
+    if ch_str.startswith("+") or (ch_str.lstrip("+").isdigit() and not ch_str.startswith("-") and len(ch_str) > 7):
+        logger.warning("force_sub value looks like a phone number (%s) — skipping check. Use @username or channel ID.", ch_str)
         return False
 
     # Re-use check_force_sub logic but skip the get_force_sub() DB call
