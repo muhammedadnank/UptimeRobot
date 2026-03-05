@@ -2,10 +2,13 @@
 handlers/middleware.py
 ──────────────────────
 Reusable pre-checks applied in every command handler:
-  - is_user_banned()   — check ban status before handling any message
+  - check_banned()     — check ban status before handling any message
   - check_force_sub()  — verify channel membership if force-sub is active
+  - check_all()        — runs both checks in parallel (one round-trip each,
+                         but concurrent — saves latency vs sequential calls)
 """
 
+import asyncio
 import logging
 from pyrogram import Client
 from pyrogram.types import Message
@@ -80,6 +83,65 @@ async def check_force_sub(client: Client, message: Message) -> bool:
     except (ChatAdminRequired, PeerIdInvalid) as e:
         logger.warning("force_sub check failed (%s): %s — skipping check", channel, e)
         return False   # misconfigured channel, don't block users
+    except Exception as e:
+        logger.warning("force_sub unexpected error: %s", e)
+        return False
+
+async def check_all(client: Client, message: Message) -> bool:
+    """
+    Run ban check and force-sub fetch concurrently.
+    Returns True if the message should be blocked (caller should return early).
+    Slightly faster than two sequential awaits when both DB calls are needed.
+    """
+    if not message.from_user:
+        return False
+    ban_task   = asyncio.create_task(is_banned(message.from_user.id))
+    fsub_task  = asyncio.create_task(get_force_sub())
+    banned_result, channel = await asyncio.gather(ban_task, fsub_task)
+    banned, reason = banned_result
+
+    if banned:
+        await message.reply(
+            f"🚫 **You are banned from using this bot.**\n\n"
+            f"📝 Reason: _{reason}_\n\n"
+            f"If you think this is a mistake, contact the bot admin."
+        )
+        return True
+
+    if not channel:
+        return False
+
+    # Re-use check_force_sub logic but skip the get_force_sub() DB call
+    # since we already have the channel value
+    user_id = message.from_user.id
+    try:
+        from pyrogram.enums import ChatMemberStatus
+        member = await client.get_chat_member(channel, user_id)
+        if member.status == ChatMemberStatus.BANNED:
+            raise UserNotParticipant
+        return False
+    except UserNotParticipant:
+        try:
+            invite = await client.create_chat_invite_link(channel)
+            invite_url = invite.invite_link
+        except Exception:
+            ch = str(channel).lstrip("@")
+            invite_url = f"https://t.me/{ch}" if not str(channel).lstrip("-").isdigit() else None
+        from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        buttons = []
+        if invite_url:
+            buttons.append([InlineKeyboardButton("📢 Join Channel", url=invite_url)])
+        buttons.append([InlineKeyboardButton("🔄 I Joined — Try Again", callback_data="check_fsub")])
+        await message.reply(
+            "🛡️ **Access Restricted**\n\n"
+            "You must join our channel to use this bot.\n\n"
+            "👇 Join and then tap **I Joined — Try Again**.",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        return True
+    except (ChatAdminRequired, PeerIdInvalid) as e:
+        logger.warning("force_sub check failed (%s): %s — skipping check", channel, e)
+        return False
     except Exception as e:
         logger.warning("force_sub unexpected error: %s", e)
         return False
