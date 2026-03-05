@@ -22,7 +22,7 @@ UptimeRobot-main/
 │
 ├── 📄 .env.example           # Environment variable template
 ├── 📄 requirements.txt       # Python dependencies
-├── 📄 Procfile               # worker: python bot.py
+├── 📄 Procfile               # worker: python -m app.main
 ├── 📄 railway.toml           # Railway deploy config
 ├── 📄 README.md              # Documentation
 └── 📄 LICENSE                # MIT License
