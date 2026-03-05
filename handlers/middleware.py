@@ -12,11 +12,47 @@ import asyncio
 import logging
 from pyrogram import Client
 from pyrogram.types import Message
-from pyrogram.errors import UserNotParticipant, ChatAdminRequired, PeerIdInvalid
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired, PeerIdInvalid, BadRequest
 
 from db import is_banned, get_force_sub
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_force_sub_channel(channel: str | int | None) -> str | int | None:
+    """
+    Normalize force-sub value into a bot-safe chat target.
+
+    Accepts:
+      - @username
+      - t.me/username links
+      - negative channel IDs (e.g. -100...)
+    Rejects phone-like / invalid values to avoid BOT_METHOD_INVALID (ResolvePhone).
+    """
+    if channel is None:
+        return None
+
+    ch = str(channel).strip()
+    if not ch:
+        return None
+
+    # Allow links from admin copy/paste
+    if ch.startswith("https://t.me/"):
+        ch = ch.removeprefix("https://t.me/").strip("/")
+    elif ch.startswith("http://t.me/"):
+        ch = ch.removeprefix("http://t.me/").strip("/")
+
+    # Telegram usernames: @name or name (letters/nums/underscore)
+    uname = ch.lstrip("@")
+    if uname and uname.replace("_", "").isalnum() and not uname.isdigit():
+        return f"@{uname}"
+
+    # Only negative IDs are valid chat IDs for channels/supergroups.
+    if ch.startswith("-") and ch.lstrip("-").isdigit():
+        return ch
+
+    # Anything else is unsafe / invalid for bots (phone numbers, random text).
+    return None
 
 
 async def check_banned(client: Client, message: Message) -> bool:
@@ -46,10 +82,9 @@ async def check_force_sub(client: Client, message: Message) -> bool:
     if not channel:
         return False  # feature disabled
 
-    # Reject phone numbers — bots cannot resolve them (BOT_METHOD_INVALID)
-    ch_str = str(channel).strip()
-    if ch_str.startswith("+") or (ch_str.lstrip("+").isdigit() and not ch_str.startswith("-") and len(ch_str) > 7):
-        logger.warning("force_sub value looks like a phone number (%s) — skipping check. Use @username or channel ID.", ch_str)
+        channel = _normalize_force_sub_channel(channel)
+    if not channel:
+        logger.warning("force_sub value is invalid; expected @username, t.me link, or negative channel ID. Skipping check.")
         return False
 
     user_id = message.from_user.id if message.from_user else None
@@ -89,6 +124,10 @@ async def check_force_sub(client: Client, message: Message) -> bool:
     except (ChatAdminRequired, PeerIdInvalid) as e:
         logger.warning("force_sub check failed (%s): %s — skipping check", channel, e)
         return False   # misconfigured channel, don't block users
+    except BadRequest as e:
+        # Defensive: avoid spammy BOT_METHOD_INVALID / ResolvePhone issues.
+        logger.warning("force_sub bad request (%s): %s — skipping check", channel, e)
+        return False
     except Exception as e:
         logger.warning("force_sub unexpected error: %s", e)
         return False
@@ -117,10 +156,9 @@ async def check_all(client: Client, message: Message) -> bool:
     if not channel:
         return False
 
-    # Reject phone numbers — bots cannot resolve them (BOT_METHOD_INVALID)
-    ch_str = str(channel).strip()
-    if ch_str.startswith("+") or (ch_str.lstrip("+").isdigit() and not ch_str.startswith("-") and len(ch_str) > 7):
-        logger.warning("force_sub value looks like a phone number (%s) — skipping check. Use @username or channel ID.", ch_str)
+    channel = _normalize_force_sub_channel(channel)
+    if not channel:
+        logger.warning("force_sub value is invalid; expected @username, t.me link, or negative channel ID. Skipping check.")
         return False
 
     # Re-use check_force_sub logic but skip the get_force_sub() DB call
@@ -153,6 +191,9 @@ async def check_all(client: Client, message: Message) -> bool:
         return True
     except (ChatAdminRequired, PeerIdInvalid) as e:
         logger.warning("force_sub check failed (%s): %s — skipping check", channel, e)
+        return False
+    except BadRequest as e:
+        logger.warning("force_sub bad request (%s): %s — skipping check", channel, e)
         return False
     except Exception as e:
         logger.warning("force_sub unexpected error: %s", e)
