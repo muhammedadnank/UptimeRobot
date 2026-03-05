@@ -111,12 +111,15 @@ async def ban_user(telegram_id: int, reason: str = "No reason provided") -> bool
 
 
 async def unban_user(telegram_id: int) -> bool:
+    """Unban a user. Returns True if user exists (even if already unbanned).
+    Returns False only if user not found or DB error."""
     try:
         result = await get_db().users.update_one(
             {"telegram_id": telegram_id},
             {"$set": {"banned": False, "ban_reason": ""}},
         )
-        return result.modified_count == 1
+        # matched_count=1 means user exists (even if already unbanned)
+        return result.matched_count == 1
     except Exception as e:
         logger.error("unban_user error: %s", e)
         return False
