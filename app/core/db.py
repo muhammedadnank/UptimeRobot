@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
-
 MONGODB_URI = os.environ.get("MONGODB_URI", "")
 
 _client: AsyncIOMotorClient | None = None
@@ -21,7 +20,7 @@ def get_db():
     return _client["uptimebot"]
 
 
-# ── Users ─────────────────────────────────────────────────────────────────────
+# Users
 
 async def get_user(telegram_id: int) -> dict | None:
     try:
@@ -91,12 +90,10 @@ async def total_users_count() -> int:
         logger.error("total_users_count error: %s", e)
         return 0
 
-
-# ── Ban / Unban ───────────────────────────────────────────────────────────────
-
+# Ban / Unban
 async def ban_user(telegram_id: int, reason: str = "No reason provided") -> bool:
-    """Ban a user. Creates a minimal record if they don't exist yet."""
-    try:
+    """Ban a user. Creates a minimal record if they do not exist yet."""
+     try:
         await get_db().users.update_one(
             {"telegram_id": telegram_id},
             {
@@ -129,7 +126,7 @@ async def unban_user(telegram_id: int) -> bool:
 
 
 async def is_banned(telegram_id: int) -> tuple[bool, str]:
-    """Returns (is_banned, reason)."""
+    """Return (is_banned, reason)."""
     try:
         user = await get_db().users.find_one({"telegram_id": telegram_id}, {"_id": 0})
         if user and user.get("banned"):
@@ -157,8 +154,7 @@ async def total_banned_count() -> int:
         return 0
 
 
-# ── Force Subscribe ───────────────────────────────────────────────────────────
-
+# Force subscribe
 async def get_force_sub() -> str | None:
     """Get the current force-sub channel username/id from DB config."""
     try:
@@ -186,15 +182,14 @@ async def set_force_sub(channel: str | None) -> bool:
         return False
 
 
-# ── DB Init (indexes) ─────────────────────────────────────────────────────────
-
+# DB init (indexes)
 async def init_db() -> None:
     """Create indexes on startup. Call once from app startup."""
     try:
         db = get_db()
         await db.users.create_index("telegram_id", unique=True)
         await db.config.create_index("key", unique=True)
-        logger.info("✅ MongoDB connected and indexes ready.")
+        logger.info("MongoDB connected and indexes ready.")
     except Exception as e:
         logger.error("init_db error: %s", e)
         raise
