@@ -3,6 +3,8 @@ import sys
 import logging
 import asyncio
 import re
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from db import init_db, get_user, upsert_user, delete_user
@@ -174,6 +176,26 @@ def _register_core_handlers(client: Client):
             await query.answer("❌ You haven't joined yet!", show_alert=True)
 
 
+# ── Dummy HTTP server (keeps Render Web Service happy) ────────────────────────
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, *args):
+        pass  # silence access logs
+
+
+def _start_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("🌐 Health server started on port %d", port)
+
+
 def main():
     for var, val in [
         ("API_ID", API_ID), ("API_HASH", API_HASH),
@@ -184,6 +206,8 @@ def main():
 
     if not os.environ.get("MONGODB_URI"):
         raise ValueError("❌ Environment variable 'MONGODB_URI' is not set!")
+
+    _start_health_server()
 
     async def _run():
         global app
