@@ -125,11 +125,6 @@ UptimeRobot-main/
 ├── app/
 │   ├── main.py             # Module entrypoint (`python -m app.main`)
 │   ├── core/
-UptimeRobot-main/
-│
-├── app/
-│   ├── main.py             # Module entrypoint (`python -m app.main`)
-│   ├── core/
 │   │   ├── db.py           # MongoDB layer (users/config/indexes)
 │   │   ├── api_cache.py    # get_api_for() per-user API cache
 │   │   └── uptime_robot.py # UptimeRobot REST API wrapper (aiohttp)
