@@ -3,15 +3,15 @@
 ```
 UptimeRobot-main/
 │
-── 📁 app/
+├── 📁 app/
 │   ├── 📄 main.py            # Module entrypoint (`python -m app.main`)
 │   ├── 📁 core/
-│   │   ├── 📄 db.py          # Compatibility wrapper for DB module
-│   │   ├── 📄 api_cache.py   # Compatibility wrapper for API cache utils
-│   │   └── 📄 uptime_robot.py# Compatibility wrapper for API client
-│   └── 📁 handlers/          # Compatibility namespace for handlers package
+│   │   ├── 📄 db.py          # MongoDB layer (primary implementation)
+│   │   ├── 📄 api_cache.py   # API instance cache utilities
+│   │   └── 📄 uptime_robot.py# UptimeRobot API client
+│   └── 📁 handlers/          # Bot handlers package (primary implementation)
 │
-├── 📄 bot.py                 # Legacy entrypoint (backward compatible)
+├── 📄 bot.py                 # Backward-compatible launcher
 ├── 📄 db.py                  # MongoDB — users CRUD, ban/unban, force-sub config, indexes
 ├── 📄 utils.py               # get_api_for() — per-user API instance cache
 ├── 📄 uptime_robot.py        # UptimeRobot REST API wrapper (aiohttp, session reuse)
