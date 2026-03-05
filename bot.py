@@ -26,10 +26,10 @@ app: Client = None  # type: ignore[assignment]
 
 NO_KEY_MSG = (
     "🔑 **API Key not set!**\n\n"
-    "Please set your UptimeRealbot API key first:\n"
+    "Please set your UptimeRobot API key first:\n"
     "`/setkey ur_your_api_key_here`\n\n"
     "Get your key from:\n"
-    "dashboard.UptimeRobot → Integrations & API → API"
+    "dashboard.uptimerobot.com → Integrations & API → API"
 )
 
 
@@ -42,60 +42,90 @@ def _register_core_handlers(client: Client):
         if await check_all(c, message):
             return
         from handlers.callbacks import main_keyboard
+        from utils import get_api_for
         user = await get_user(message.from_user.id)
         has_key = bool(user and user.get("api_key"))
-        await message.reply(
-            "👋 **UptimeRealbot Bot**\n\n"
-            "Full control of your UptimeRealbot account from Telegram!\n\n"
-            + ("✅ API key is set. You're ready to go!\n\n" if has_key else "⚠️ No API key set yet. Use /setkey to get started.\n\n")
-            + "📋 **Commands:**\n"
-            "• /setkey `<api_key>` — Set your UptimeRealbot API key\n"
-            "• /mykey — Check if your API key is set\n"
-            "• /deletekey — Remove your stored API key\n"
-            "• /status — Monitor statuses\n"
-            "• /stats — Uptime & response times\n"
-            "• /alerts — Recent alert logs\n"
-            "• /account — Account details\n"
-            "• /add — Add new monitor\n"
-            "• /pause `<id>` — Pause monitor\n"
-            "• /resume `<id>` — Resume monitor\n"
-            "• /delete `<id>` — Delete monitor\n"
-            "• /contacts — Alert contacts\n"
-            "• /addcontact — Add alert contact\n"
-            "• /delcontact `<id>` — Delete contact\n"
-            "• /mwindow — Maintenance windows\n"
-            "• /addmwindow — Add window\n"
-            "• /delmwindow `<id>` — Delete window\n"
-            "• /psp — Public status pages\n"
-            "• /addpsp — Add status page\n"
-            "• /delpsp `<id>` — Delete status page\n"
-            "• /cancel — Cancel current operation\n"
-            "• /menu — Interactive panel\n\n"
-            "👮 **Admin Commands:**\n"
-            "• /botstats — Bot usage statistics\n"
-            "• /broadcast — Broadcast a message\n"
-            "• /ban `<id>` — Ban a user\n"
-            "• /unban `<id>` — Unban a user\n"
-            "• /bannedlist — List banned users\n"
-            "• /setfsub `<channel>` — Enable force subscribe\n"
-            "• /delfsub — Disable force subscribe\n"
-            "• /restart — Restart the bot",
-            reply_markup=main_keyboard() if has_key else None,
-        )
+        name = message.from_user.first_name or "there"
+
+        if has_key:
+            # Fetch live account summary
+            api = await get_api_for(message.from_user.id)
+            summary = ""
+            if api:
+                acc = await api.get_account_details()
+                if acc:
+                    up     = acc.get("up_monitors", 0)
+                    down   = acc.get("down_monitors", 0)
+                    paused = acc.get("paused_monitors", 0)
+                    summary = (
+                        f"\n📊 **Your Monitors**\n"
+                        f"✅ Up: `{up}`  🔴 Down: `{down}`  ⏸️ Paused: `{paused}`\n"
+                    )
+            await message.reply(
+                f"👋 Welcome back, **{name}!**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"{summary}\n"
+                f"Use the buttons below or type a command.\n\n"
+                f"📋 **Quick Commands:**\n"
+                f"• /status — Live monitor status\n"
+                f"• /stats — Uptime & response times\n"
+                f"• /alerts — Recent alert logs\n"
+                f"• /add — Add new monitor\n"
+                f"• /account — Account details\n"
+                f"• /menu — Full control panel",
+                reply_markup=main_keyboard(),
+            )
+        else:
+            await message.reply(
+                f"👋 Hello, **{name}!**\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🤖 **UptimeRobot Bot**\n"
+                f"Full control of your UptimeRobot account from Telegram.\n\n"
+                f"**🚀 Get Started:**\n"
+                f"1️⃣ Go to [dashboard.uptimerobot.com](https://dashboard.uptimerobot.com)\n"
+                f"2️⃣ My Settings → API Settings → Copy your key\n"
+                f"3️⃣ Send: `/setkey ur_your_key_here`\n\n"
+                f"**📋 All Commands:**\n"
+                f"• /setkey `<key>` — Link your UptimeRobot API key\n"
+                f"• /mykey — Check if key is set\n"
+                f"• /deletekey — Remove stored key\n"
+                f"• /status — Monitor statuses\n"
+                f"• /stats — Uptime & response times\n"
+                f"• /alerts — Recent alert logs\n"
+                f"• /account — Account details\n"
+                f"• /add — Add new monitor\n"
+                f"• /pause `<id>` /resume `<id>` /delete `<id>`\n"
+                f"• /contacts /addcontact /delcontact `<id>`\n"
+                f"• /mwindow /addmwindow /delmwindow `<id>`\n"
+                f"• /psp /addpsp /delpsp `<id>`\n"
+                f"• /menu — Interactive control panel\n\n"
+                f"👮 **Admin:** /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart",
+            )
 
     @client.on_message(filters.command("menu") & filters.private)
     async def cmd_menu(c: Client, message: Message):
         if await check_all(c, message):
             return
         from handlers.callbacks import main_keyboard
+        from utils import get_api_for
         user = await get_user(message.from_user.id)
         if not user or not user.get("api_key"):
             await message.reply(NO_KEY_MSG)
             return
-        await message.reply(
-            "🖥️ **UptimeRealbot Control Panel**\nChoose an action:",
-            reply_markup=main_keyboard(),
-        )
+        api = await get_api_for(message.from_user.id)
+        summary = "🖥️ **UptimeRobot Control Panel**\n"
+        if api:
+            acc = await api.get_account_details()
+            if acc:
+                up     = acc.get("up_monitors", 0)
+                down   = acc.get("down_monitors", 0)
+                paused = acc.get("paused_monitors", 0)
+                summary += (
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"✅ Up: `{up}`  🔴 Down: `{down}`  ⏸️ Paused: `{paused}`\n"
+                )
+        summary += "\nChoose an action:"
+        await message.reply(summary, reply_markup=main_keyboard())
 
     @client.on_message(filters.command("setkey") & filters.private)
     async def cmd_setkey(c: Client, message: Message):
@@ -109,7 +139,7 @@ def _register_core_handlers(client: Client):
                 "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
                 "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
                 "Get your key from:\n"
-                "dashboard.UptimeRobot → Integrations & API → API"
+                "dashboard.uptimerobot.com → Integrations & API → API"
             )
             return
         api_key = args[0].strip()
@@ -120,14 +150,14 @@ def _register_core_handlers(client: Client):
                 "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
                 "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
                 "Find your key at:\n"
-                "dashboard.UptimeRobot → Integrations & API → API"
+                "dashboard.uptimerobot.com → Integrations & API → API"
             )
             return
         ok = await upsert_user(message.from_user.id, api_key)
         if ok:
             await message.reply(
                 "✅ **API key saved!**\n\n"
-                "Your UptimeRealbot account is now linked.\n"
+                "Your UptimeRobot account is now linked.\n"
                 "Use /menu or /status to get started."
             )
         else:
@@ -241,7 +271,7 @@ def main():
 
         await init_db()
         await app.start()
-        logger.info("🤖 UptimeRealbot Bot started (multi-user, MongoDB).")
+        logger.info("🤖 UptimeRobot Bot started (multi-user, MongoDB).")
         await asyncio.Event().wait()
 
     asyncio.run(_run())
