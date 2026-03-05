@@ -231,17 +231,52 @@ def register(app: Client):
 
     @app.on_message(filters.command("botstats") & filters.private & is_admin)
     async def cmd_botstats(client: Client, message: Message):
+        sent = await message.reply("⏳ Gathering stats…")
+
         total  = await total_users_count()
         banned = await total_banned_count()
         active = total - banned
         fsub   = await get_force_sub() or "Disabled"
 
-        await message.reply(
+        # Count users who have an API key set
+        keyed = 0
+        total_monitors = 0
+        monitors_up = monitors_down = monitors_paused = 0
+
+        async for user in get_all_users():
+            if user.get("banned"):
+                continue
+            if user.get("api_key"):
+                keyed += 1
+
+        # Bot uptime
+        import psutil, os as _os
+        try:
+            proc = psutil.Process(_os.getpid())
+            import datetime as _dt
+            started = _dt.datetime.fromtimestamp(proc.create_time())
+            uptime_delta = _dt.datetime.now() - started
+            hours, rem   = divmod(int(uptime_delta.total_seconds()), 3600)
+            mins          = rem // 60
+            uptime_str    = f"{hours}h {mins}m"
+            mem_mb        = round(proc.memory_info().rss / 1024 / 1024, 1)
+        except Exception:
+            uptime_str = "N/A"
+            mem_mb     = "N/A"
+
+        await sent.edit_text(
             f"📊 **Bot Statistics**\n\n"
-            f"👥 Total Users: `{total}`\n"
-            f"✅ Active: `{active}`\n"
-            f"🚫 Banned: `{banned}`\n\n"
-            f"📢 Force Subscribe: `{fsub}`"
+            f"**👥 Users**\n"
+            f"  • Total: `{total}`\n"
+            f"  • Active: `{active}`\n"
+            f"  • Banned: `{banned}`\n"
+            f"  • With API key: `{keyed}`\n\n"
+            f"**🔧 System**\n"
+            f"  • Uptime: `{uptime_str}`\n"
+            f"  • Memory: `{mem_mb} MB`\n\n"
+            f"**📢 Settings**\n"
+            f"  • Force Subscribe: `{fsub}`\n"
+            f"  • Admin IDs: `{', '.join(str(i) for i in ADMIN_IDS)}`"
         )
 
     # ── /restart ──────────────────────────────────────────────────────────────
