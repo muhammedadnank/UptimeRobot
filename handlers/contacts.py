@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import get_api_for
-from handlers.middleware import check_banned, check_force_sub
+from handlers.middleware import check_all
 from handlers.monitors import _set_state
 
 CONTACT_TYPE = {1:"SMS", 2:"Email", 3:"Webhook", 4:"Boxcar", 5:"Push Bullet",
@@ -15,9 +15,7 @@ def register(app: Client):
 
     @app.on_message(filters.command("contacts") & filters.private)
     async def cmd_contacts(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -46,9 +44,7 @@ def register(app: Client):
 
     @app.on_message(filters.command("addcontact") & filters.private)
     async def cmd_addcontact(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
@@ -63,9 +59,7 @@ def register(app: Client):
 
     @app.on_message(filters.command("delcontact") & filters.private)
     async def cmd_delcontact(client: Client, message: Message):
-        if await check_banned(client, message):
-            return
-        if await check_force_sub(client, message):
+        if await check_all(client, message):
             return
         api = await get_api_for(message.from_user.id)
         if not api:
