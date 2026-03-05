@@ -35,12 +35,12 @@ logger = logging.getLogger(__name__)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_admins() -> list[int]:
-    """Read ADMINS env var — space-separated Telegram user IDs."""
+    """Read ADMINS env var — comma or space-separated Telegram user IDs."""
     raw = os.environ.get("ADMINS", "")
     result = []
-    for part in raw.split():
+    for part in raw.replace(",", " ").split():
         try:
-            result.append(int(part))
+            result.append(int(part.strip()))
         except ValueError:
             pass
     return result
