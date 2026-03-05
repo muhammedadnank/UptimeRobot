@@ -6,27 +6,19 @@ UptimeRobot-main/
 ├── 📁 app/
 │   ├── 📄 main.py            # Module entrypoint (`python -m app.main`)
 │   ├── 📁 core/
-│   │   ├── 📄 db.py          # MongoDB layer (primary implementation)
+│   │   ├── 📄 db.py          # MongoDB layer (users/config/indexes)
 │   │   ├── 📄 api_cache.py   # API instance cache utilities
 │   │   └── 📄 uptime_robot.py# UptimeRobot API client
-│   └── 📁 handlers/          # Bot handlers package (primary implementation)
-│
-├── 📄 bot.py                 # Backward-compatible launcher
-├── 📄 db.py                  # MongoDB — users CRUD, ban/unban, force-sub config, indexes
-├── 📄 utils.py               # get_api_for() — per-user API instance cache
-├── 📄 uptime_robot.py        # UptimeRobot REST API wrapper (aiohttp, session reuse)
-│
-├── 📁 handlers/
-│   ├── 📄 __init__.py
-│   ├── 📄 middleware.py      # check_banned · check_force_sub · check_all
-│   ├── 📄 monitors.py        # /status /stats /alerts /add /pause /resume /delete /cancel
-│   ├── 📄 account.py         # /account
-│   ├── 📄 contacts.py        # /contacts /addcontact /delcontact
-│   ├── 📄 mwindow.py         # /mwindow /addmwindow /delmwindow
-│   ├── 📄 psp.py             # /psp /addpsp /delpsp
-│   ├── 📄 callbacks.py       # Inline keyboard callbacks + main_keyboard()
-│   ├── 📄 admin.py           # /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart
-│   └── 📄 inline.py          # Inline mode — @bot <query> monitor search
+│   └── 📁 handlers/
+│       ├── 📄 middleware.py  # check_banned · check_force_sub · check_all
+│       ├── 📄 monitors.py    # /status /stats /alerts /add /pause /resume /delete /cancel
+│       ├── 📄 account.py     # /account
+│       ├── 📄 contacts.py    # /contacts /addcontact /delcontact
+│       ├── 📄 mwindow.py     # /mwindow /addmwindow /delmwindow
+│       ├── 📄 psp.py         # /psp /addpsp /delpsp
+│       ├── 📄 callbacks.py   # Inline keyboard callbacks + main_keyboard()
+│       ├── 📄 admin.py       # /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart
+│       └── 📄 inline.py      # Inline mode — @bot <query> monitor search
 │
 ├── 📄 .env.example           # Environment variable template
 ├── 📄 requirements.txt       # Python dependencies
@@ -44,22 +36,22 @@ UptimeRobot-main/
 User sends message / callback
           │
           ▼
-    handlers/*.py
+    app/handlers/*.py
           │
           ▼
-  middleware.check_all()
-    ├── db.is_banned()         ← MongoDB users collection
-    └── db.get_force_sub()     ← MongoDB config collection
+  app.handlers.middleware.check_all()
+    ├── app.core.db.is_banned()      ← MongoDB users collection
+    └── app.core.db.get_force_sub()  ← MongoDB config collection
           │
      Passed? ──No──► Block + reply
           │
          Yes
           │
           ▼
-   utils.get_api_for()         ← returns cached UptimeRobotAPI instance
+   app.core.api_cache.get_api_for() ← returns cached UptimeRobotAPI instance
           │
           ▼
-   uptime_robot.py             ← HTTPS call to api.uptimerobot.com/v2
+   app.core.uptime_robot.py  ← HTTPS call to api.uptimerobot.com/v2
           │
           ▼
       Reply to user
@@ -71,19 +63,20 @@ User sends message / callback
 
 | File | Responsibility |
 |---|---|
-| `bot.py` | App entry point, event loop, handler registration |
-| `db.py` | All MongoDB read/write — never imported by `uptime_robot.py` |
-| `utils.py` | API instance factory — caches per user, closes old sessions |
-| `uptime_robot.py` | Pure API wrapper — no Telegram, no DB dependencies |
-| `handlers/middleware.py` | Runs before every command — ban check + force-sub check |
-| `handlers/monitors.py` | Monitor commands + multi-step state machine (TTL: 10 min) |
-| `handlers/callbacks.py` | All `callback_data` routing + `main_keyboard()` builder |
-| `handlers/admin.py` | Admin-only commands, guarded by `ADMINS` env var |
-| `handlers/inline.py` | Inline query handler — search monitors from any chat |
+| `app/main.py` | App entrypoint, event loop, handler registration |
+| `app/core/db.py` | All MongoDB read/write |
+| `app/core/api_cache.py` | API instance factory — caches per user, closes old sessions |
+| `app/core/uptime_robot.py` | Pure API wrapper — no Telegram, no DB dependencies |
+| `app/handlers/middleware.py` | Runs before every command — ban check + force-sub check |
+| `app/handlers/monitors.py` | Monitor commands + multi-step state machine (TTL: 10 min) |
+| `app/handlers/callbacks.py` | All `callback_data` routing + `main_keyboard()` builder |
+| `app/handlers/admin.py` | Admin-only commands, guarded by `ADMINS` env var |
+| `app/handlers/inline.py` | Inline query handler — search monitors from any chat |
 
 ---
 
 ## ⚙️ Environment Variables
+
 
 | Variable | Required | Description |
 |---|---|---|
