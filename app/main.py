@@ -197,7 +197,7 @@ def _register_core_handlers(client: Client):
     # ── check_fsub callback (force-sub retry button) ──────────────────────────
     @client.on_callback_query(filters.regex("^check_fsub$"))
     async def cb_check_fsub(c: Client, query):
-        from handlers.middleware import check_force_sub as _cfs
+        from app.handlers.middleware import check_force_sub as _cfs
         from pyrogram.errors import MessageNotModified
         still_blocked = await _cfs(c, query.message)
         if not still_blocked:
