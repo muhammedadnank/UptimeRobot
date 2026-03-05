@@ -48,8 +48,9 @@ def _normalize_force_sub_channel(channel: str | int | None) -> str | int | None:
         return f"@{uname}"
 
     # Only negative IDs are valid chat IDs for channels/supergroups.
+    # Return as int so Pyrogram treats it as chat_id, not a resolvable text token.
     if ch.startswith("-") and ch.lstrip("-").isdigit():
-        return ch
+        return int(ch)
 
     # Anything else is unsafe / invalid for bots (phone numbers, random text).
     return None
@@ -84,7 +85,7 @@ async def check_force_sub(client: Client, message: Message) -> bool:
 
         channel = _normalize_force_sub_channel(channel)
     if not channel:
-        logger.warning("force_sub value is invalid; expected @username, t.me link, or negative channel ID. Skipping check.")
+        logger.warning("force_sub value is invalid (%r); expected @username, t.me link, or negative channel ID. Skipping check.", channel)
         return False
 
     user_id = message.from_user.id if message.from_user else None
@@ -158,7 +159,7 @@ async def check_all(client: Client, message: Message) -> bool:
 
     channel = _normalize_force_sub_channel(channel)
     if not channel:
-        logger.warning("force_sub value is invalid; expected @username, t.me link, or negative channel ID. Skipping check.")
+        logger.warning("force_sub value is invalid (%r); expected @username, t.me link, or negative channel ID. Skipping check.", channel)
         return False
 
     # Re-use check_force_sub logic but skip the get_force_sub() DB call
