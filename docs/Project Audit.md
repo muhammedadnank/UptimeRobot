@@ -7,7 +7,7 @@ _Last checked: local repository state_
 The following checks were run successfully:
 - `pytest -q`
 - `python -m compileall app`
-- `python -m py_compile bot.py db.py`
+- `python -m py_compile bot.py`
 
 No failing tests or syntax errors were found.
 
@@ -50,12 +50,7 @@ Below are **optional improvements** to make naming more consistent and scalable.
 
 ## 4) Unnecessary / duplicate files check
 
-### A) `db.py` at project root
-- Current role: compatibility re-export (`from app.core.db import *`).
-- Keep only if old imports use `import db`.
-- If no legacy usage, this can be removed later.
-
-### B) Duplicate “folder structure” docs
+### A) Duplicate “folder structure” docs
 - `README.md` includes structure section.
 - `docs/Folder Structure.md` also contains similar content.
 
@@ -63,7 +58,7 @@ Recommendation:
 1. Keep detailed architecture only in `docs/Folder Structure.md`.
 2. Keep README version short + add link to docs.
 
-### C) `bot.py` + `app/main.py`
+### B) `bot.py` + `app/main.py`
 - If both are entrypoints, this is okay for compatibility.
 - If `bot.py` only forwards to `app.main`, mention it clearly in README as legacy launcher.
 
