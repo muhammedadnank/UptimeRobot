@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_admins() -> list[int]:
-    """Read ADMINS env var — comma or space-separated Telegram user IDs."""
+def _parse_admins() -> list[int]:
+    """Parse ADMINS env var — comma or space-separated Telegram user IDs."""
     raw = os.environ.get("ADMINS", "")
     result = []
     for part in raw.replace(",", " ").split():
@@ -46,10 +46,14 @@ def _get_admins() -> list[int]:
     return result
 
 
+# Parse once at import time — env vars don't change at runtime
+ADMIN_IDS: list[int] = _parse_admins()
+
+
 def admin_filter(_, __, message: Message) -> bool:
     if not message.from_user:
         return False
-    return message.from_user.id in _get_admins()
+    return message.from_user.id in ADMIN_IDS
 
 
 is_admin = filters.create(admin_filter)
@@ -83,8 +87,7 @@ def register(app: Client):
             # Skip banned users
             banned, _ = await is_banned(uid)
             if banned:
-                done += 1
-                continue
+                continue  # don't increment done — banned users aren't in the audience
             try:
                 await b_msg.copy(uid)
                 success += 1
@@ -148,7 +151,7 @@ def register(app: Client):
             await message.reply("⚠️ Invalid user ID. Must be a number.")
             return
 
-        if uid in _get_admins():
+        if uid in ADMIN_IDS:
             await message.reply("❌ Cannot ban another admin.")
             return
 
