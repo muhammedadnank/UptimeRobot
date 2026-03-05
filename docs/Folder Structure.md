@@ -3,7 +3,15 @@
 ```
 UptimeRobot-main/
 │
-├── 📄 bot.py                 # Entry point — Client setup, /start /setkey /menu /mykey /deletekey
+── 📁 app/
+│   ├── 📄 main.py            # Module entrypoint (`python -m app.main`)
+│   ├── 📁 core/
+│   │   ├── 📄 db.py          # Compatibility wrapper for DB module
+│   │   ├── 📄 api_cache.py   # Compatibility wrapper for API cache utils
+│   │   └── 📄 uptime_robot.py# Compatibility wrapper for API client
+│   └── 📁 handlers/          # Compatibility namespace for handlers package
+│
+├── 📄 bot.py                 # Legacy entrypoint (backward compatible)
 ├── 📄 db.py                  # MongoDB — users CRUD, ban/unban, force-sub config, indexes
 ├── 📄 utils.py               # get_api_for() — per-user API instance cache
 ├── 📄 uptime_robot.py        # UptimeRobot REST API wrapper (aiohttp, session reuse)
