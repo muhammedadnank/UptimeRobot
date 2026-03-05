@@ -1,5 +1,5 @@
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import get_api_for
 from handlers.middleware import check_all
 
@@ -21,16 +21,35 @@ def register(app: Client):
         if not acc:
             await sent.edit_text("❌ Could not fetch account details.")
             return
+
         used     = acc.get("up_monitors", 0) + acc.get("down_monitors", 0) + acc.get("paused_monitors", 0)
-        limit    = acc.get("monitor_limit", "?")
+        limit    = acc.get("monitor_limit", 1) or 1
         interval = acc.get("monitor_interval", "?")
+
+        # Monitor usage progress bar
+        filled = round(used / limit * 10)
+        bar    = "▓" * filled + "░" * (10 - filled)
+        pct    = round(used / limit * 100)
+
+        # Plan badge
+        plan = "🆓 Free" if limit <= 50 else "⭐ Pro"
+
         text = (
-            "👤 **Account Details**\n\n"
+            "👤 **Account Details**\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
             f"📧 Email: `{acc.get('email', '?')}`\n"
-            f"📊 Monitors: `{used}` / `{limit}`\n"
+            f"🏷️ Plan: {plan}\n"
             f"⏱ Check interval: every `{interval}` min\n\n"
+            f"**📊 Monitor Usage**\n"
+            f"`{bar}` {used} / {limit} ({pct}%)\n\n"
             f"✅ Up: `{acc.get('up_monitors', 0)}`\n"
             f"🔴 Down: `{acc.get('down_monitors', 0)}`\n"
             f"⏸️ Paused: `{acc.get('paused_monitors', 0)}`"
         )
-        await sent.edit_text(text)
+        markup = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📊 Status", callback_data="status"),
+                InlineKeyboardButton("🔙 Menu",   callback_data="menu"),
+            ]
+        ])
+        await sent.edit_text(text, reply_markup=markup)
