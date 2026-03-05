@@ -125,27 +125,24 @@ UptimeRobot-main/
 ├── app/
 │   ├── main.py             # Module entrypoint (`python -m app.main`)
 │   ├── core/
-│   │   ├── db.py           # MongoDB layer (primary implementation)
-│   │   ├── api_cache.py    # API instance cache utilities
-│   │   └── uptime_robot.py # UptimeRobot API client
-│   └── handlers/           # Bot handlers package (primary implementation)
+UptimeRobot-main/
 │
-├── bot.py                  # Existing entrypoint (kept for backward compatibility)
-├── db.py                   # MongoDB — users CRUD, ban/unban, force-sub config, indexes
-├── utils.py                # get_api_for() — per-user API instance cache
-├── uptime_robot.py         # UptimeRobot REST API wrapper (aiohttp, session reuse)
-│
-├── handlers/
-│   ├── __init__.py
-│   ├── middleware.py       # check_banned · check_force_sub · check_all
-│   ├── monitors.py         # /status /stats /alerts /add /pause /resume /delete + UI builders
-│   ├── account.py          # /account with usage progress bar
-│   ├── contacts.py         # /contacts /addcontact /delcontact
-│   ├── mwindow.py          # /mwindow /addmwindow /delmwindow
-│   ├── psp.py              # /psp /addpsp /delpsp
-│   ├── callbacks.py        # All inline keyboard callbacks + main_keyboard()
-│   ├── admin.py            # /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart
-│   └── inline.py           # Inline mode — @bot <query> monitor search
+├── app/
+│   ├── main.py             # Module entrypoint (`python -m app.main`)
+│   ├── core/
+│   │   ├── db.py           # MongoDB layer (users/config/indexes)
+│   │   ├── api_cache.py    # get_api_for() per-user API cache
+│   │   └── uptime_robot.py # UptimeRobot REST API wrapper (aiohttp)
+│   └── handlers/
+│       ├── middleware.py   # check_banned · check_force_sub · check_all
+│       ├── monitors.py     # /status /stats /alerts /add /pause /resume /delete + UI builders
+│       ├── account.py      # /account with usage progress bar
+│       ├── contacts.py     # /contacts /addcontact /delcontact
+│       ├── mwindow.py      # /mwindow /addmwindow /delmwindow
+│       ├── psp.py          # /psp /addpsp /delpsp
+│       ├── callbacks.py    # Inline keyboard callbacks + main_keyboard()
+│       ├── admin.py        # /botstats /broadcast /ban /unban /bannedlist /setfsub /delfsub /restart
+│       └── inline.py       # Inline mode — @bot <query> monitor search
 │
 ├── .env.example            # Environment variable template
 ├── requirements.txt        # Python dependencies
