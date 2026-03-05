@@ -122,7 +122,15 @@ Tap a result to share it directly into the chat.
 ```
 UptimeRobot-main/
 │
-├── bot.py                  # Entry point — Client setup, /start /setkey /menu /mykey /deletekey
+├── app/
+│   ├── main.py             # Module entrypoint (`python -m app.main`)
+│   ├── core/
+│   │   ├── db.py           # Compatibility wrapper for DB module
+│   │   ├── api_cache.py    # Compatibility wrapper for API cache utils
+│   │   └── uptime_robot.py # Compatibility wrapper for API client module
+│   └── handlers/           # Compatibility namespace for handlers package
+│
+├── bot.py                  # Existing entrypoint (kept for backward compatibility)
 ├── db.py                   # MongoDB — users CRUD, ban/unban, force-sub config, indexes
 ├── utils.py                # get_api_for() — per-user API instance cache
 ├── uptime_robot.py         # UptimeRobot REST API wrapper (aiohttp, session reuse)
@@ -141,7 +149,7 @@ UptimeRobot-main/
 │
 ├── .env.example            # Environment variable template
 ├── requirements.txt        # Python dependencies
-├── Procfile                # worker: python bot.py
+├── Procfile                # worker: python -m app.main
 ├── railway.toml            # Railway deploy config
 ├── README.md               # This file
 └── LICENSE                 # MIT License
@@ -194,7 +202,7 @@ cp .env.example .env
 # Edit .env — fill in API_ID, API_HASH, BOT_TOKEN, MONGODB_URI, ADMINS, PORT
 
 # Start
-python bot.py
+python -m app.main
 ```
 
 ---
@@ -207,7 +215,7 @@ python bot.py
 2. Connect your GitHub repo
 3. Set:
    - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `python bot.py`
+   - **Start Command:** `python -m app.main`
 4. Add all environment variables (set `PORT=10000`)
 5. **Create Background Worker** → Deploy ✅
 
