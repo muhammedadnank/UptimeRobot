@@ -1,26 +1,97 @@
-# Project Audit & Structure Suggestions
+# Project Audit & Naming Suggestions
 
-This audit gives a cleaner folder strategy and flags files that look redundant.
+_Last checked: local repository state_  
 
-## Current structure status
+## 1) Full health check (re-run)
 
-The codebase already follows a good module split:
-- `app/core/` for data/API layers.
-- `app/handlers/` for Telegram command/callback logic.
-- `tests/` for unit tests.
-- `docs/` for project documentation.
+The following checks were run successfully:
+- `pytest -q`
+- `python -m compileall app`
+- `python -m py_compile bot.py db.py`
 
-## Suggested target structure
+No failing tests or syntax errors were found.
+
+---
+
+## 2) Current structure — good parts
+
+Your current split is mostly clean:
+- `app/core/` → shared backend logic (DB/API/cache)
+- `app/handlers/` → Telegram command/callback handlers
+- `tests/` → unit tests
+- `docs/` → project docs
+
+This is a solid baseline. ✅
+
+---
+
+## 3) Better file/folder naming suggestions
+
+Below are **optional improvements** to make naming more consistent and scalable.
+
+### Recommended directory style
+
+- Keep package names short + lowercase.
+- Use one naming convention across handler files.
+- Prefer full words instead of abbreviations for clarity.
+
+### Suggested rename map
+
+| Current | Suggested | Why |
+|---|---|---|
+| `app/handlers/mwindow.py` | `app/handlers/maintenance_windows.py` | `mwindow` is short/unclear for new contributors |
+| `app/handlers/psp.py` | `app/handlers/public_status_pages.py` | Expands acronym, easier discoverability |
+| `app/handlers/callbacks.py` | `app/handlers/callback_router.py` | Name reflects routing responsibility |
+| `app/core/uptime_robot.py` | `app/core/uptimerobot_api.py` | Keeps API wrapper intent explicit |
+
+> You do **not** need to rename everything now. Do this in one dedicated refactor PR to avoid import breakage.
+
+---
+
+## 4) Unnecessary / duplicate files check
+
+### A) `db.py` at project root
+- Current role: compatibility re-export (`from app.core.db import *`).
+- Keep only if old imports use `import db`.
+- If no legacy usage, this can be removed later.
+
+### B) Duplicate “folder structure” docs
+- `README.md` includes structure section.
+- `docs/Folder Structure.md` also contains similar content.
+
+Recommendation:
+1. Keep detailed architecture only in `docs/Folder Structure.md`.
+2. Keep README version short + add link to docs.
+
+### C) `bot.py` + `app/main.py`
+- If both are entrypoints, this is okay for compatibility.
+- If `bot.py` only forwards to `app.main`, mention it clearly in README as legacy launcher.
+
+---
+
+## 5) Suggested target structure (future)
 
 ```text
 UptimeRobot/
 ├── app/
-│   ├── core/                # DB + UptimeRobot API + shared caches
-│   ├── handlers/            # command/callback/inline handlers
-│   └── main.py              # app entrypoint
-├── tests/                   # unit tests
-├── docs/                    # architecture + setup docs
-├── bot.py                   # optional compatibility launcher
+│   ├── core/
+│   │   ├── db.py
+│   │   ├── api_cache.py
+│   │   └── uptimerobot_api.py
+│   ├── handlers/
+│   │   ├── admin.py
+│   │   ├── account.py
+│   │   ├── monitors.py
+│   │   ├── contacts.py
+│   │   ├── maintenance_windows.py
+│   │   ├── public_status_pages.py
+│   │   ├── callback_router.py
+│   │   └── inline.py
+│   └── main.py
+├── tests/
+├── docs/
+│   ├── Folder Structure.md
+│   └── Project Audit.md
 ├── requirements.txt
 ├── Procfile
 ├── railway.toml
@@ -28,23 +99,13 @@ UptimeRobot/
 └── LICENSE
 ```
 
-## Unnecessary or duplicate files to review
+---
 
-1. `db.py` (project root)
-   - Currently a compatibility re-export of `app.core.db`.
-   - Keep it only if old scripts import `db` directly.
-   - If no legacy usage exists, remove it in a future cleanup.
+## 6) Safe cleanup order
 
-2. Duplicate structure text in `README.md`
-   - The `Project Structure` block is duplicated.
-   - Keep one canonical version and link to docs.
+1. Add import aliases (temporary) after each rename.
+2. Update imports in all modules.
+3. Run tests + compile checks.
+4. Remove temporary aliases in next release.
 
-3. `docs/Folder Structure.md`
-   - Useful, but overlaps with README section.
-   - Keep docs version as source-of-truth and shorten README.
-
-## Recommended cleanup order
-
-1. Keep compatibility layer (`db.py`) for one release.
-2. Add deprecation note in README/docs.
-3. Remove compatibility file in next major/minor release.
+This keeps deployment risk low.
