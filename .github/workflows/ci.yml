@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Syntax check
+        run: python -m compileall -q .
+
+      - name: Run tests (if present)
+        run: |
+          if find . -type f -name 'test_*.py' -o -name '*_test.py' | grep -q .; then
+            pytest -q
+          else
+            echo "No tests found; skipping pytest."
+          fi
