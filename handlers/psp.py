@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from utils import get_api_for
+from handlers.middleware import check_banned, check_force_sub
 from handlers.monitors import _set_state
 
 PSP_STATUS = {0: "Paused", 1: "Active"}
@@ -11,6 +12,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("psp") & filters.private)
     async def cmd_psp(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -40,6 +45,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("addpsp") & filters.private)
     async def cmd_addpsp(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
@@ -53,6 +62,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("delpsp") & filters.private)
     async def cmd_delpsp(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
