@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from utils import get_api_for
+from handlers.middleware import check_banned, check_force_sub
 
 NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
 
@@ -9,6 +10,10 @@ def register(app: Client):
 
     @app.on_message(filters.command("account") & filters.private)
     async def cmd_account(client: Client, message: Message):
+        if await check_banned(client, message):
+            return
+        if await check_force_sub(client, message):
+            return
         api = await get_api_for(message.from_user.id)
         if not api:
             await message.reply(NO_KEY_MSG)
