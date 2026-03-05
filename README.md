@@ -10,8 +10,7 @@
 [![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-6441a5?logo=railway&logoColor=white)](https://railway.app)
 [![Deploy on Render](https://img.shields.io/badge/Deploy-Render-46e3b7?logo=render&logoColor=white)](https://render.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue)](https://github.com/muhammedadnank/UptimeRobot/tree/V1.0.0)
+[![Version](https://img.shields.io/badge/Version-2.0.0-blue)](https://github.com/muhammedadnank/UptimeRobot/tree/V2.0.0)
 
 </div>
 
