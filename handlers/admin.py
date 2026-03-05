@@ -269,7 +269,18 @@ def register(app: Client):
                 f"⚠️ Make sure the bot is an **admin** in the channel."
             )
             return
-        channel = args[0]
+        channel = args[0].strip()
+        # Validate — must be @username or negative channel ID, not a phone number
+        ch = channel.lstrip("@")
+        if channel.startswith("+") or (ch.isdigit() and not channel.startswith("-")):
+            await message.reply(
+                "⚠️ **Invalid channel format.**\n\n"
+                "Please use:\n"
+                "• Username: `/setfsub @yourchannel`\n"
+                "• Channel ID: `/setfsub -1001234567890`\n\n"
+                "Phone numbers are not supported."
+            )
+            return
         ok = await set_force_sub(channel)
         if ok:
             await message.reply(
