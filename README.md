@@ -5,7 +5,7 @@
 **Full control of your UptimeRobot account — directly from Telegram.**
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)](https://www.python.org/)
-[![Pyrogram](https://img.shields.io/badge/Pyrogram-fork-2ca5e0?logo=telegram&logoColor=white)](https://github.com/KurimuzonAkuma/pyrogram)
+[![Pyrogram](https://img.shields.io/badge/Pyrogram-kurigram-2ca5e0?logo=telegram&logoColor=white)](https://github.com/KurimuzonAkuma/pyrogram)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47a248?logo=mongodb&logoColor=white)](https://cloud.mongodb.com)
 [![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-6441a5?logo=railway&logoColor=white)](https://railway.app)
 [![Deploy on Render](https://img.shields.io/badge/Deploy-Render-46e3b7?logo=render&logoColor=white)](https://render.com)
@@ -26,9 +26,10 @@
 | 🔔 **Alert Contacts** | List, add (Email / Telegram / Webhook / Slack), delete |
 | 🪟 **Maintenance Windows** | List, create (Once / Daily / Weekly / Monthly), delete |
 | 📄 **Public Status Pages** | List, create, delete |
+| 🔍 **Inline Search** | Type `@bot <query>` in any chat to instantly share monitor status |
 | 🔒 **Security** | Per-user API key isolation, confirmation prompt on all destructive actions, ban system |
 | 🌐 **Multi-user** | Unlimited users, each with their own UptimeRobot account |
-| 👮 **Admin Panel** | Broadcast, ban/unban, bot stats, force-subscribe, restart |
+| 👮 **Admin Panel** | Broadcast, ban/unban, detailed bot stats, force-subscribe, restart |
 
 ---
 
@@ -80,7 +81,7 @@
 ### 👮 Admin Only
 | Command | Description |
 |---|---|
-| `/botstats` | Total users, active, banned, force-sub status |
+| `/botstats` | Users count, memory, uptime, force-sub status |
 | `/broadcast` | Reply to any message with this to send it to all users |
 | `/ban <id> [reason]` | Ban a user from using the bot |
 | `/unban <id>` | Unban a user |
@@ -94,28 +95,51 @@
 
 ---
 
+## 🔍 Inline Search
+
+Type `@yourbotusername` in **any Telegram chat** to search your monitors without opening the bot.
+
+| Query | Result |
+|---|---|
+| `@bot` | Overview + all monitors |
+| `@bot mysite` | Search by name or URL |
+| `@bot down` | Only down monitors |
+| `@bot up` | Only up monitors |
+| `@bot paused` | Only paused monitors |
+
+Each result shows monitor name, status, URL, uptime %, response time, and ID.  
+Tap a result to share it directly into the chat.
+
+> ⚠️ **Enable inline mode first:** BotFather → your bot → **Bot Settings → Inline Mode → Enable**
+
+---
+
 ## 📁 Project Structure
 
 ```
-uptimebot/
-├── bot.py                  # Entry point — core commands, app lifecycle
-├── db.py                   # MongoDB layer — async user/ban/config CRUD via motor
-├── uptime_robot.py         # Async UptimeRobot API wrapper (aiohttp, session reuse)
-├── utils.py                # Per-user API instance factory
-├── requirements.txt        # Python dependencies
-├── Procfile                # Process config for Railway / Render
-├── railway.toml            # Railway deployment settings
+UptimeRobot-main/
+│
+├── bot.py                  # Entry point — Client setup, core handlers (/start /setkey /menu)
+├── db.py                   # MongoDB — users, ban/unban, force-sub config
+├── utils.py                # Per-user API instance cache (get_api_for)
+├── uptime_robot.py         # UptimeRobot API wrapper (aiohttp, session reuse)
+│
+├── handlers/
+│   ├── __init__.py
+│   ├── middleware.py       # check_banned, check_force_sub, check_all
+│   ├── monitors.py         # /status /stats /alerts /add /pause /resume /delete
+│   ├── account.py          # /account
+│   ├── contacts.py         # /contacts /addcontact /delcontact
+│   ├── mwindow.py          # /mwindow /addmwindow /delmwindow
+│   ├── psp.py              # /psp /addpsp /delpsp
+│   ├── callbacks.py        # All inline keyboard callbacks + main_keyboard()
+│   ├── admin.py            # /broadcast /ban /unban /bannedlist /botstats /restart /setfsub /delfsub
+│   └── inline.py           # Inline mode — @bot <query> monitor search
+│
 ├── .env.example            # Environment variable template
-└── handlers/
-    ├── __init__.py
-    ├── monitors.py         # Monitor commands + state machine (TTL: 10 min)
-    ├── account.py          # /account command
-    ├── contacts.py         # Alert contact commands
-    ├── mwindow.py          # Maintenance window commands
-    ├── psp.py              # Public status page commands
-    ├── callbacks.py        # Inline keyboard button handlers
-    ├── admin.py            # Admin-only commands (broadcast, ban, fsub, stats)
-    └── middleware.py       # Ban check + force-subscribe check (runs on every message)
+├── requirements.txt        # Python dependencies
+├── Procfile                # worker: python bot.py
+└── railway.toml            # Railway deployment config
 ```
 
 ---
@@ -128,9 +152,10 @@ uptimebot/
 |---|---|
 | `API_ID` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
 | `API_HASH` | [my.telegram.org](https://my.telegram.org) → API Development Tools |
-| `BOT_TOKEN` | [@BotFather](https://t.me/BotFather) on Telegram → `/newbot` |
+| `BOT_TOKEN` | [@BotFather](https://t.me/BotFather) → `/newbot` |
 | `MONGODB_URI` | [cloud.mongodb.com](https://cloud.mongodb.com) → Free Cluster → Connect → Drivers |
 | `ADMINS` | Your Telegram user ID — get it from [@userinfobot](https://t.me/userinfobot) |
+| `PORT` | Set to `10000` on Render, or any free port locally |
 
 > Each user's UptimeRobot API key is stored in MongoDB — it is **not** an env variable.
 
@@ -149,7 +174,7 @@ uptimebot/
 
 ---
 
-### Step 3 — Install & Run
+### Step 3 — Install & Run Locally
 
 ```bash
 # Clone
@@ -161,7 +186,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Fill in API_ID, API_HASH, BOT_TOKEN, MONGODB_URI, ADMINS
+# Edit .env — fill in API_ID, API_HASH, BOT_TOKEN, MONGODB_URI, ADMINS, PORT
 
 # Start
 python bot.py
@@ -173,18 +198,11 @@ python bot.py
 
 ### Railway
 
-```bash
-git init && git add . && git commit -m "init"
-git remote add origin https://github.com/YOUR_USERNAME/uptimebot.git
-git push -u origin main
-```
-
-1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-2. Select your repo
-3. **Variables** tab → add all env vars (see below)
-4. Done — Railway auto-deploys on every push ✅
-
----
+1. Push your code to GitHub
+2. [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo**
+3. Select your repo
+4. **Variables** tab → add all env vars
+5. Done — Railway auto-deploys on every push ✅
 
 ### Render
 
@@ -193,7 +211,7 @@ git push -u origin main
 3. Set:
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `python bot.py`
-4. Add all environment variables
+4. Add all environment variables (set `PORT=10000`)
 5. **Create Background Worker** → Deploy ✅
 
 ---
@@ -208,12 +226,15 @@ API_HASH=your_api_hash_here
 # Bot token — @BotFather
 BOT_TOKEN=your_bot_token_here
 
-# MongoDB Atlas connection string — cloud.mongodb.com
+# MongoDB Atlas connection string
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 
-# Admin user IDs — comma or space separated
+# Admin user IDs — space or comma separated
 # Get your ID from @userinfobot on Telegram
 ADMINS=123456789
+
+# HTTP port for health check (Render uses 10000 by default)
+PORT=10000
 ```
 
 ---
@@ -224,8 +245,9 @@ ADMINS=123456789
 |---|---|
 | [`kurigram`](https://github.com/KurimuzonAkuma/pyrogram) | Telegram MTProto — actively maintained Pyrogram fork |
 | [`motor`](https://motor.readthedocs.io) | Async MongoDB driver |
-| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for UptimeRobot API (session reuse) |
+| [`aiohttp`](https://docs.aiohttp.org) | Async HTTP client for UptimeRobot API |
 | [`tgcrypto`](https://github.com/pyrogram/tgcrypto) | Fast Telegram encryption (speeds up MTProto) |
+| [`psutil`](https://psutil.readthedocs.io) | System stats for `/botstats` (memory, uptime) |
 
 ---
 
@@ -236,44 +258,37 @@ ADMINS=123456789
 | Field | Type | Description |
 |---|---|---|
 | `telegram_id` | `int` | Unique index — Telegram user ID |
-| `api_key` | `str` | UptimeRobot API key (`ur_…`) |
+| `api_key` | `str` | UptimeRobot API key (`ur_…` or `u0000000-…`) |
 | `banned` | `bool` | Whether the user is banned |
 | `ban_reason` | `str` | Reason for ban |
 | `banned_at` | `datetime` | When the user was banned |
 | `created_at` | `datetime` | When the user first ran `/setkey` |
 | `updated_at` | `datetime` | Last API key update |
-| `last_active` | `datetime` | Last API call made |
+| `last_active` | `datetime` | Last API call timestamp |
 
 **Collection: `config`**
 
 | Field | Type | Description |
 |---|---|---|
 | `key` | `str` | Unique index — config key (e.g. `force_sub`) |
-| `value` | `str` | Config value (e.g. `@yourchannel`) |
+| `value` | `str` | Config value (e.g. `@yourchannel` or `-1001234567890`) |
 
 ---
 
 ## 🐛 Troubleshooting
 
-### `RuntimeError: Task got Future attached to a different loop`
-
-This error appears on **Python 3.14** when Pyrogram's `Client` is created at module level before `asyncio.run()` starts the event loop.
-
-**Fix (already applied in this repo):** The `Client` is instantiated inside `_run()`, after `asyncio.run()` has created the event loop.
-
----
-
-### Common Issues
-
 | Symptom | Fix |
 |---|---|
 | Bot doesn't respond | Check `BOT_TOKEN` is correct and bot is not blocked |
+| `api_key not found` error | Regenerate key at dashboard.uptimerobot.com → My Settings → API Settings |
 | MongoDB connection error | Whitelist your server IP in Atlas → Network Access |
 | `API_ID` / `API_HASH` errors | These come from [my.telegram.org](https://my.telegram.org), not BotFather |
 | `/setkey` says invalid key | Key must start with `ur_` or match `u1234567-xxxx…` format |
 | Multi-step flow stuck | Send `/cancel` to reset state |
 | Admin commands not working | Add your Telegram user ID to `ADMINS` env variable |
-| Force-sub not working | Make sure the bot is an **admin** in the channel |
+| Force-sub not working | Make sure the bot is an **admin** in the channel. Use `@username` or channel ID — not a phone number |
+| Inline mode not working | Enable in BotFather → Bot Settings → Inline Mode |
+| Render deploy times out | Make sure `PORT` env var is set — the health server must bind a port |
 
 ---
 
@@ -281,10 +296,10 @@ This error appears on **Python 3.14** when Pyrogram's `Client` is created at mod
 
 - **Private chats only** — group chats are not supported
 - Multi-step flows (`/add`, `/addcontact`, `/addmwindow`, `/addpsp`) auto-expire after **10 minutes** of inactivity
-- UptimeRobot Free plan: **10 API requests/minute**
+- UptimeRobot Free plan: **50 monitors**, **10 API requests/minute**
+- Alert timestamps are displayed in **IST (UTC+5:30)**
 - Weekly maintenance windows: day-of-week (1 = Mon … 7 = Sun)
 - Monthly maintenance windows: day-of-month (1 – 28)
-- Alert timestamps are displayed in **IST (UTC+5:30)**
 - API keys are stored as plaintext — enable Atlas **Encryption at Rest** for extra security in production
 
 ---
