@@ -1,1 +1,1 @@
-
+"""Backward-compatible handlers package."""
