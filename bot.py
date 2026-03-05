@@ -26,10 +26,10 @@ app: Client = None  # type: ignore[assignment]
 
 NO_KEY_MSG = (
     "🔑 **API Key not set!**\n\n"
-    "Please set your UptimeRobot API key first:\n"
+    "Please set your UptimeRealbot API key first:\n"
     "`/setkey ur_your_api_key_here`\n\n"
     "Get your key from:\n"
-    "dashboard.uptimerobot.com → Integrations & API → API"
+    "dashboard.UptimeRobot → Integrations & API → API"
 )
 
 
@@ -45,11 +45,11 @@ def _register_core_handlers(client: Client):
         user = await get_user(message.from_user.id)
         has_key = bool(user and user.get("api_key"))
         await message.reply(
-            "👋 **UptimeRobot Bot**\n\n"
-            "Full control of your UptimeRobot account from Telegram!\n\n"
+            "👋 **UptimeRealbot Bot**\n\n"
+            "Full control of your UptimeRealbot account from Telegram!\n\n"
             + ("✅ API key is set. You're ready to go!\n\n" if has_key else "⚠️ No API key set yet. Use /setkey to get started.\n\n")
             + "📋 **Commands:**\n"
-            "• /setkey `<api_key>` — Set your UptimeRobot API key\n"
+            "• /setkey `<api_key>` — Set your UptimeRealbot API key\n"
             "• /mykey — Check if your API key is set\n"
             "• /deletekey — Remove your stored API key\n"
             "• /status — Monitor statuses\n"
@@ -93,7 +93,7 @@ def _register_core_handlers(client: Client):
             await message.reply(NO_KEY_MSG)
             return
         await message.reply(
-            "🖥️ **UptimeRobot Control Panel**\nChoose an action:",
+            "🖥️ **UptimeRealbot Control Panel**\nChoose an action:",
             reply_markup=main_keyboard(),
         )
 
@@ -109,7 +109,7 @@ def _register_core_handlers(client: Client):
                 "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
                 "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
                 "Get your key from:\n"
-                "dashboard.uptimerobot.com → Integrations & API → API"
+                "dashboard.UptimeRobot → Integrations & API → API"
             )
             return
         api_key = args[0].strip()
@@ -120,14 +120,14 @@ def _register_core_handlers(client: Client):
                 "• Main API key: `u1234567-xxxxxxxxxxxxxxxxxxxx`\n"
                 "• Monitor key: `ur_xxxxxxxxxxxxxxxxxxxx`\n\n"
                 "Find your key at:\n"
-                "dashboard.uptimerobot.com → Integrations & API → API"
+                "dashboard.UptimeRobot → Integrations & API → API"
             )
             return
         ok = await upsert_user(message.from_user.id, api_key)
         if ok:
             await message.reply(
                 "✅ **API key saved!**\n\n"
-                "Your UptimeRobot account is now linked.\n"
+                "Your UptimeRealbot account is now linked.\n"
                 "Use /menu or /status to get started."
             )
         else:
@@ -241,7 +241,7 @@ def main():
 
         await init_db()
         await app.start()
-        logger.info("🤖 UptimeRobot Bot started (multi-user, MongoDB).")
+        logger.info("🤖 UptimeRealbot Bot started (multi-user, MongoDB).")
         await asyncio.Event().wait()
 
     asyncio.run(_run())
