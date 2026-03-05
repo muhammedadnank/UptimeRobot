@@ -2,7 +2,7 @@ from pyrogram import Client
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import MessageNotModified
 from utils import get_api_for
-from db import delete_user
+from db import delete_user, is_banned
 from handlers.monitors import build_status, build_stats, build_alerts, user_state, _set_state, _get_state
 
 NO_KEY_MSG = "🔑 No API key set. Use /setkey to link your UptimeRobot account."
@@ -42,6 +42,17 @@ def register(app: Client):
         await query.answer()
         data = query.data
         uid  = query.from_user.id
+
+        # Ban check — silently ignore all callbacks from banned users
+        banned, ban_reason = await is_banned(uid)
+        if banned:
+            await safe_edit(
+                query.message,
+                f"🚫 **You are banned from using this bot.**\n\n"
+                f"📝 Reason: _{ban_reason}_"
+            )
+            return
+
         api  = await get_api_for(uid)
 
         # Commands that don't need API key
